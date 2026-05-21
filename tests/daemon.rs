@@ -12,10 +12,16 @@ use signal_core::{
     ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Operation, Reply, Request,
     RequestRejectionReason, SessionEpoch, SignalVerb, SubReply,
 };
+use signal_frame::{
+    ExchangeIdentifier as FrameExchangeIdentifier, ExchangeLane as FrameExchangeLane,
+    LaneSequence as FrameLaneSequence, Request as FrameRequest, SessionEpoch as FrameSessionEpoch,
+};
+use signal_persona::engine_management::{
+    Frame as SupervisionFrame, FrameBody as SupervisionFrameBody, Operation as SupervisionRequest,
+    Query as SupervisionQuery, Reply as SupervisionReply,
+};
 use signal_persona::{
-    ComponentHealth, ComponentHealthQuery, ComponentHello, ComponentKind, ComponentName,
-    ComponentReadinessQuery, SupervisionFrame, SupervisionFrameBody, SupervisionProtocolVersion,
-    SupervisionReply, SupervisionRequest,
+    ComponentHealth, ComponentKind, ComponentName, EngineManagementProtocolVersion, Presence,
 };
 use signal_persona_system::{
     FocusSubscription, SystemBackend, SystemFrame, SystemFrameBody, SystemHealth,
@@ -161,40 +167,40 @@ fn system_daemon_answers_component_supervision_relation() {
 
     write_supervision_request(
         &mut stream,
-        SupervisionRequest::ComponentHello(ComponentHello {
+        SupervisionRequest::Announce(Presence {
             expected_component: ComponentName::new("persona-system"),
             expected_kind: ComponentKind::System,
-            supervision_protocol_version: SupervisionProtocolVersion::new(1),
+            engine_management_protocol_version: EngineManagementProtocolVersion::new(1),
         }),
     );
     let identity = codec.read_reply(&mut stream).expect("identity reply");
     assert!(matches!(
         identity,
-        SupervisionReply::ComponentIdentity(identity)
+        SupervisionReply::Identified(identity)
             if identity.name.as_str() == "persona-system"
                 && identity.kind == ComponentKind::System
     ));
 
     write_supervision_request(
         &mut stream,
-        SupervisionRequest::ComponentReadinessQuery(ComponentReadinessQuery {
-            component: ComponentName::new("persona-system"),
-        }),
+        SupervisionRequest::Query(SupervisionQuery::ReadinessStatus(ComponentName::new(
+            "persona-system",
+        ))),
     );
     assert!(matches!(
         codec.read_reply(&mut stream).expect("readiness reply"),
-        SupervisionReply::ComponentReady(_)
+        SupervisionReply::Ready(_)
     ));
 
     write_supervision_request(
         &mut stream,
-        SupervisionRequest::ComponentHealthQuery(ComponentHealthQuery {
-            component: ComponentName::new("persona-system"),
-        }),
+        SupervisionRequest::Query(SupervisionQuery::HealthStatus(ComponentName::new(
+            "persona-system",
+        ))),
     );
     assert!(matches!(
         codec.read_reply(&mut stream).expect("health reply"),
-        SupervisionReply::ComponentHealthReport(report)
+        SupervisionReply::HealthReport(report)
             if report.health == ComponentHealth::Running
     ));
 }
@@ -241,8 +247,8 @@ fn write_request(stream: &mut UnixStream, request: SystemRequest) {
 
 fn write_supervision_request(stream: &mut UnixStream, request: SupervisionRequest) {
     let frame = SupervisionFrame::new(SupervisionFrameBody::Request {
-        exchange: test_exchange(),
-        request: Request::from_payload(request),
+        exchange: test_supervision_exchange(),
+        request: FrameRequest::from_payload(request),
     });
     let bytes = frame
         .encode_length_prefixed()
@@ -274,6 +280,14 @@ fn test_exchange() -> ExchangeIdentifier {
         SessionEpoch::new(1),
         ExchangeLane::Connector,
         LaneSequence::new(1),
+    )
+}
+
+fn test_supervision_exchange() -> FrameExchangeIdentifier {
+    FrameExchangeIdentifier::new(
+        FrameSessionEpoch::new(1),
+        FrameExchangeLane::Connector,
+        FrameLaneSequence::new(1),
     )
 }
 

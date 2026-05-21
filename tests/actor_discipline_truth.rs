@@ -12,8 +12,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use persona_system::{FocusTracker, SystemSupervisor};
 use persona_system::supervision::SupervisionPhase;
+use persona_system::{FocusTracker, SystemSupervisor};
 
 #[test]
 fn public_actor_nouns_carry_data() {

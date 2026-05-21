@@ -33,9 +33,7 @@ impl SystemDaemon {
         let supervision = SupervisionListener::new(
             SupervisionProfile::system(),
             PathBuf::from(configuration.supervision_socket_path.as_str()),
-            SupervisionSocketMode::from_octal(
-                configuration.supervision_socket_mode.into_u32(),
-            ),
+            SupervisionSocketMode::from_octal(configuration.supervision_socket_mode.into_u32()),
         );
         Self {
             socket: PathBuf::from(configuration.system_socket_path.as_str()),

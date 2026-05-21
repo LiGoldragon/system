@@ -261,7 +261,9 @@ async fn niri_focus_cannot_leak_state_between_concurrent_subscribers() {
     assert!(secondary_statistics.satisfied());
 
     FocusTracker::stop(primary).await.expect("primary stops");
-    FocusTracker::stop(secondary).await.expect("secondary stops");
+    FocusTracker::stop(secondary)
+        .await
+        .expect("secondary stops");
 }
 
 #[test]
@@ -279,8 +281,8 @@ fn niri_subscription_cannot_poll_focus_snapshots() {
     assert_eq!(
         lines,
         vec![
-            "(FocusObservation (NiriWindow 10) false 1000000005)",
-            "(FocusObservation (NiriWindow 10) true 2000000007)",
+            "(FocusObservation ((NiriWindow 10) False 1000000005))",
+            "(FocusObservation ((NiriWindow 10) True 2000000007))",
         ]
     );
 
