@@ -1,0 +1,28 @@
+{}
+
+[
+  (Focus [Watch Unwatch Snapshot])
+  (Status [System])
+]
+
+[]
+
+[]
+
+{
+  Focus [(Watch Watch) (Unwatch Unwatch) (Snapshot Snapshot)]
+  Status [(System System)]
+  Watch (Identifier)
+  Unwatch (Identifier)
+  Snapshot (Text)
+  System (Text)
+  Text (String)
+  Identifier (u64)
+  Name (String)
+  Path (String)
+}
+
+[
+  (Version 0 1)
+  (Status Concept)
+]
