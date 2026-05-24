@@ -291,24 +291,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 
 [[package]]
-name = "persona-system"
-version = "0.1.0"
-dependencies = [
- "kameo",
- "nota-codec",
- "nota-config",
- "serde",
- "serde_json",
- "signal-core",
- "signal-frame",
- "signal-persona",
- "signal-persona-origin",
- "signal-persona-system",
- "thiserror",
- "tokio",
-]
-
-[[package]]
 name = "pin-project-lite"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -514,9 +496,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "signal-persona-system"
+name = "signal-sema"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/signal-persona-system.git?branch=main#e2244170ab24f7746e404e3744206758c34eb79e"
+source = "git+https://github.com/LiGoldragon/signal-sema.git?branch=main#1604cceb787389274127df7e3a273c164db61feb"
+dependencies = [
+ "nota-codec",
+ "rkyv",
+ "thiserror",
+]
+
+[[package]]
+name = "signal-system"
+version = "0.1.0"
+source = "git+https://github.com/LiGoldragon/signal-system.git?branch=main#d03355438833c3d63ccf12fe86f10ad094fb9ca0"
 dependencies = [
  "nota-codec",
  "nota-config",
@@ -524,16 +516,6 @@ dependencies = [
  "signal-core",
  "signal-persona",
  "signal-persona-origin",
- "thiserror",
-]
-
-[[package]]
-name = "signal-sema"
-version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/signal-sema.git?branch=main#1604cceb787389274127df7e3a273c164db61feb"
-dependencies = [
- "nota-codec",
- "rkyv",
  "thiserror",
 ]
 
@@ -558,6 +540,24 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
+]
+
+[[package]]
+name = "system"
+version = "0.1.0"
+dependencies = [
+ "kameo",
+ "nota-codec",
+ "nota-config",
+ "serde",
+ "serde_json",
+ "signal-core",
+ "signal-frame",
+ "signal-persona",
+ "signal-persona-origin",
+ "signal-system",
+ "thiserror",
+ "tokio",
 ]
 
 [[package]]

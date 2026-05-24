@@ -1,4 +1,4 @@
-//! Architectural-truth witnesses for persona-system's actor
+//! Architectural-truth witnesses for system's actor
 //! discipline.
 //!
 //! - Public actor nouns are data-bearing — `mem::size_of::<X>() > 0`.
@@ -12,8 +12,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use persona_system::supervision::SupervisionPhase;
-use persona_system::{FocusTracker, SystemSupervisor};
+use system::supervision::SupervisionPhase;
+use system::{FocusTracker, SystemSupervisor};
 
 #[test]
 fn public_actor_nouns_carry_data() {

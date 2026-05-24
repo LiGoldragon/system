@@ -3,7 +3,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use persona_system::{
+use system::{
     ApplyNiriEvent, FocusObservation, FocusStatisticsProbe, FocusTracker, NiriEvent,
     NiriFocusSource, NiriWindowId, ReadFocusStatistics, SystemTarget,
 };
@@ -329,10 +329,8 @@ impl FakeNiri {
             .duration_since(UNIX_EPOCH)
             .expect("system time")
             .as_nanos();
-        let root = std::env::temp_dir().join(format!(
-            "persona-system-{name}-{}-{stamp}",
-            std::process::id()
-        ));
+        let root =
+            std::env::temp_dir().join(format!("system-{name}-{}-{stamp}", std::process::id()));
         fs::create_dir_all(&root).expect("fake niri directory exists");
         let windows = root.join("windows.json");
         let events = root.join("events.jsonl");

@@ -1,4 +1,4 @@
-# persona-system skill
+# system skill
 
 Work here when the change concerns OS/window-manager abstractions, focus
 events, target identity, or backend adapters.

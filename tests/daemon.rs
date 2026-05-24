@@ -4,10 +4,6 @@ use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
 use std::thread;
 
-use persona_system::{
-    SocketMode, SupervisionFrameCodec, SupervisionListener, SupervisionProfile,
-    SupervisionSocketMode, SystemCommandLine, SystemDaemon, SystemFrameCodec,
-};
 use signal_core::{
     ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Operation, Reply, Request,
     RequestRejectionReason, SessionEpoch, SignalVerb, SubReply,
@@ -23,10 +19,14 @@ use signal_persona::engine_management::{
 use signal_persona::{
     ComponentHealth, ComponentKind, ComponentName, EngineManagementProtocolVersion, Presence,
 };
-use signal_persona_system::{
+use signal_system::{
     FocusSubscription, SystemBackend, SystemFrame, SystemFrameBody, SystemHealth,
     SystemOperationKind, SystemReadiness, SystemReply, SystemRequest, SystemRequestUnimplemented,
     SystemStatus, SystemStatusQuery, SystemTarget, SystemUnimplementedReason,
+};
+use system::{
+    SocketMode, SupervisionFrameCodec, SupervisionListener, SupervisionProfile,
+    SupervisionSocketMode, SystemCommandLine, SystemDaemon, SystemFrameCodec,
 };
 
 struct SocketFixture {
@@ -37,7 +37,7 @@ struct SocketFixture {
 impl SocketFixture {
     fn new(name: &str) -> Self {
         let root = std::env::temp_dir().join(format!(
-            "persona-system-{name}-{}-{}",
+            "system-{name}-{}-{}",
             std::process::id(),
             unique_nanos()
         ));
@@ -107,7 +107,7 @@ fn system_frame_codec_rejects_mismatched_signal_verb() {
 
     assert!(matches!(
         error,
-        persona_system::Error::UnexpectedSignalFrame { got }
+        system::Error::UnexpectedSignalFrame { got }
             if got == RequestRejectionReason::VerbPayloadMismatch { index: 0 }.to_string()
     ));
 }
@@ -168,7 +168,7 @@ fn system_daemon_answers_component_supervision_relation() {
     write_supervision_request(
         &mut stream,
         SupervisionRequest::Announce(Presence {
-            expected_component: ComponentName::new("persona-system"),
+            expected_component: ComponentName::new("system"),
             expected_kind: ComponentKind::System,
             engine_management_protocol_version: EngineManagementProtocolVersion::new(1),
         }),
@@ -177,14 +177,14 @@ fn system_daemon_answers_component_supervision_relation() {
     assert!(matches!(
         identity,
         SupervisionReply::Identified(identity)
-            if identity.name.as_str() == "persona-system"
+            if identity.name.as_str() == "system"
                 && identity.kind == ComponentKind::System
     ));
 
     write_supervision_request(
         &mut stream,
         SupervisionRequest::Query(SupervisionQuery::ReadinessStatus(ComponentName::new(
-            "persona-system",
+            "system",
         ))),
     );
     assert!(matches!(
@@ -194,9 +194,7 @@ fn system_daemon_answers_component_supervision_relation() {
 
     write_supervision_request(
         &mut stream,
-        SupervisionRequest::Query(SupervisionQuery::HealthStatus(ComponentName::new(
-            "persona-system",
-        ))),
+        SupervisionRequest::Query(SupervisionQuery::HealthStatus(ComponentName::new("system"))),
     );
     assert!(matches!(
         codec.read_reply(&mut stream).expect("health reply"),

@@ -1,4 +1,4 @@
-# persona-system
+# system
 
 Portable system boundary for Persona.
 

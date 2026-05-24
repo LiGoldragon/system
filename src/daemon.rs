@@ -8,7 +8,7 @@ use kameo::actor::{Actor, ActorRef, Spawn};
 use kameo::error::Infallible;
 use kameo::message::{Context, Message};
 use signal_core::{ExchangeIdentifier, NonEmpty, Reply, SignalVerb, SubReply};
-use signal_persona_system::{
+use signal_system::{
     SystemBackend, SystemDaemonConfiguration, SystemFrame, SystemFrameBody as FrameBody,
     SystemHealth, SystemOperationKind, SystemReadiness, SystemReply, SystemRequest,
     SystemRequestUnimplemented, SystemStatus, SystemStatusQuery, SystemUnimplementedReason,
@@ -76,7 +76,7 @@ impl SystemDaemon {
         let supervision = self.supervision.clone();
         let bound = self.bind()?;
         let _supervision = supervision.map(SupervisionListener::spawn).transpose()?;
-        eprintln!("persona-system-daemon socket={}", bound.socket.display());
+        eprintln!("system-daemon socket={}", bound.socket.display());
         bound.serve_forever()
     }
 

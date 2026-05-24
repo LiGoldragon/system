@@ -1,4 +1,4 @@
-use persona_system::{CommandLine, NiriFocusSource};
+use system::{CommandLine, NiriFocusSource};
 
 fn main() {
     let source = NiriFocusSource::from_environment();

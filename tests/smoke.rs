@@ -1,5 +1,5 @@
 use nota_codec::{Decoder, NotaDecode};
-use persona_system::{
+use system::{
     FocusObservation, FocusSubscription, FocusTracker, HarnessTarget, NiriEvent, NiriWindowId,
     NiriWindows, SystemRequest, SystemTarget,
 };

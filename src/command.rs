@@ -3,7 +3,7 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use nota_codec::{Decoder, Encoder, NotaDecode, NotaEncode};
-use signal_persona_system::{
+use signal_system::{
     SystemHealth, SystemReadiness, SystemReply, SystemRequest, SystemRequestUnimplemented,
     SystemStatus, SystemUnimplementedReason,
 };

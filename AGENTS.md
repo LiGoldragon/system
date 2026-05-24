@@ -1,11 +1,11 @@
-# Persona System — Agent Instructions
+# System — Agent Instructions
 
 Read `/home/li/primary/AGENTS.md` first, then `/home/li/primary/lore/AGENTS.md`.
 This repository follows the primary workspace orchestration protocol.
 
 ## Purpose
 
-`persona-system` defines the portable system boundary for Persona: window
+`system` defines the portable system boundary for Persona: window
 identity, focus events, and privileged system adapters. Backend
 code starts here only while there is a single target system; split a backend
 into its own repository once the second backend makes the common interface

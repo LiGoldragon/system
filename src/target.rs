@@ -1,4 +1,4 @@
-use signal_persona_system::SystemTarget;
+use signal_system::SystemTarget;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HarnessTarget {

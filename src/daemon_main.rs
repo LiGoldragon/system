@@ -1,6 +1,6 @@
 use nota_config::ConfigurationSource;
-use persona_system::{SystemCommandLine, daemon::SystemDaemon};
-use signal_persona_system::SystemDaemonConfiguration;
+use signal_system::SystemDaemonConfiguration;
+use system::{SystemCommandLine, daemon::SystemDaemon};
 
 fn main() {
     // The supervised production launch passes a typed
@@ -9,18 +9,18 @@ fn main() {
     // typed path when argv looks like a configuration source.
     if first_argument_is_typed_configuration_source() {
         if let Err(error) = run_from_configuration() {
-            eprintln!("persona-system-daemon: {error}");
+            eprintln!("system-daemon: {error}");
             std::process::exit(1);
         }
         return;
     }
     if let Err(error) = SystemCommandLine::from_environment().run() {
-        eprintln!("persona-system-daemon: {error}");
+        eprintln!("system-daemon: {error}");
         std::process::exit(1);
     }
 }
 
-fn run_from_configuration() -> Result<(), persona_system::error::Error> {
+fn run_from_configuration() -> Result<(), system::error::Error> {
     let configuration: SystemDaemonConfiguration = ConfigurationSource::from_argv()?.decode()?;
     SystemDaemon::from_configuration(configuration).run()
 }

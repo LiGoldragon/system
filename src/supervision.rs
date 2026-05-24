@@ -27,7 +27,7 @@ pub struct SupervisionProfile {
 impl SupervisionProfile {
     pub fn system() -> Self {
         Self {
-            name: ComponentName::new("persona-system"),
+            name: ComponentName::new("system"),
             kind: ComponentKind::System,
             health: ComponentHealth::Running,
         }

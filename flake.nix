@@ -73,7 +73,7 @@
             context.commonArgs
             // {
               inherit (context) cargoArtifacts;
-              pname = "persona-system";
+              pname = "system";
               meta.mainProgram = "system";
             }
           );
@@ -112,7 +112,7 @@
           };
           daemon = {
             type = "app";
-            program = "${self.packages.${system}.default}/bin/persona-system-daemon";
+            program = "${self.packages.${system}.default}/bin/system-daemon";
           };
         }
       );
