@@ -75,10 +75,10 @@ impl SystemCommand {
 
     pub fn run(self, source: &NiriFocusSource, mut output: impl Write) -> Result<()> {
         match self.request {
-            SystemRequest::QueryFocus(command) => {
-                NotaLine::new(SystemReply::QueryFocusReply(source.observe(command.target)?))
-                    .write(&mut output)
-            }
+            SystemRequest::QueryFocus(command) => NotaLine::new(SystemReply::QueryFocusReply(
+                source.observe(command.target)?,
+            ))
+            .write(&mut output),
             SystemRequest::WatchFocus(command) => source.subscribe(command.target, output),
             SystemRequest::QueryStatus(query) => {
                 NotaLine::new(SystemReply::SystemStatus(SystemStatus {

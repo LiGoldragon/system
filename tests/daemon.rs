@@ -7,10 +7,10 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use signal_frame::{
-    ExchangeIdentifier as FrameExchangeIdentifier, ExchangeLane as FrameExchangeLane,
-    ExchangeIdentifier, ExchangeLane, LaneSequence as FrameLaneSequence, LaneSequence, NonEmpty,
-    Reply, Request as FrameRequest, Request as SystemSignalRequest, SessionEpoch,
-    SessionEpoch as FrameSessionEpoch, SubReply,
+    ExchangeIdentifier as FrameExchangeIdentifier, ExchangeIdentifier,
+    ExchangeLane as FrameExchangeLane, ExchangeLane, LaneSequence as FrameLaneSequence,
+    LaneSequence, NonEmpty, Reply, Request as FrameRequest, Request as SystemSignalRequest,
+    SessionEpoch, SessionEpoch as FrameSessionEpoch, SubReply,
 };
 use signal_persona::engine_management::{
     Frame as SupervisionFrame, FrameBody as SupervisionFrameBody, Operation as SupervisionRequest,

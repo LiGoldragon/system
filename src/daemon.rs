@@ -235,10 +235,7 @@ impl SystemFrameCodec {
                         got: format!("expected one system payload, got {}", tail.len() + 1),
                     });
                 }
-                Ok(ReceivedSystemRequest {
-                    exchange,
-                    request,
-                })
+                Ok(ReceivedSystemRequest { exchange, request })
             }
             other => Err(Error::UnexpectedSignalFrame {
                 got: format!("{other:?}"),

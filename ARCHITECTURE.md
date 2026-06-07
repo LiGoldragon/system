@@ -23,7 +23,7 @@ not move terminal bytes.
 flowchart LR
     "Niri backend" -->|"focus events"| "FocusTracker"
     "FocusTracker" -->|"observation frame"| "signal-system"
-    "signal-system" -->|"pushed observation"| "persona-router"
+    "signal-system" -->|"pushed observation"| "router"
 ```
 
 ## 1 · Component Surface
@@ -119,8 +119,8 @@ cannot request an OS-level action.
 
 Prompt cleanliness, typed write leases, and programmatic write injection are not
 system observations in the current stack. They are terminal transport facts
-owned by `persona-terminal` and `terminal-cell` through the
-`signal-persona-terminal` contract.
+owned by `terminal` and `terminal-cell` through the
+`signal-terminal` contract.
 
 Durable consumer history is not owned here; consumers that need history persist
 it through their own Sema database. If `system` later needs durable
@@ -139,11 +139,11 @@ This repo owns:
 
 This repo does not own:
 
-- delivery decisions (`persona-router`);
-- harness lifecycle (`persona-harness`);
-- terminal PTY transport (`persona-terminal`);
+- delivery decisions (`router`);
+- harness lifecycle (`harness`);
+- terminal PTY transport (`terminal`);
 - system frame definitions (`signal-system`);
-- terminal prompt and input-gate contracts (`signal-persona-terminal`);
+- terminal prompt and input-gate contracts (`signal-terminal`);
 - durable transaction ordering for consumers.
 - any other component's Sema database.
 
@@ -199,7 +199,7 @@ tests/             smoke, daemon, and actor-runtime constraint tests
 
 ## See Also
 
-- `../persona-router/ARCHITECTURE.md`
-- `../persona-harness/ARCHITECTURE.md`
+- `../router/ARCHITECTURE.md`
+- `../harness/ARCHITECTURE.md`
 - `../signal-persona/ARCHITECTURE.md`
 - `../signal-system/ARCHITECTURE.md`

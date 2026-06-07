@@ -10,10 +10,10 @@ Rules for work here:
   `SystemDaemonConfiguration` file. Inline NOTA and `.nota` startup files
   belong to deploy/CLI tooling and are rejected before daemon construction.
 - Keep backend handles inside data-bearing adapter objects.
-- Keep routing decisions in `persona-router`.
-- Keep terminal PTY byte transport in `persona-terminal`.
+- Keep routing decisions in `router`.
+- Keep terminal PTY byte transport in `terminal`.
 - Keep prompt cleanliness, input gates, and write-injection safety in
-  `persona-terminal` / `terminal-cell`, through `signal-persona-terminal`.
+  `terminal` / `terminal-cell`, through `signal-terminal`.
 - Use `niri msg --json windows` for current-state focus probes and
   `niri msg --json event-stream` for pushed focus changes. Filter by tracked
   `NiriWindow` id before emitting Persona observations.

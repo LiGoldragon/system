@@ -11,8 +11,7 @@ This crate defines typed contracts for:
 The first implementation target is the current Niri-based Persona OS stack.
 
 Prompt cleanliness and programmatic write safety are terminal responsibilities,
-owned by `persona-terminal` / `terminal-cell` through
-`signal-persona-terminal` input gates.
+owned by `terminal` / `terminal-cell` through `signal-terminal` input gates.
 
 The `system` CLI accepts one NOTA command:
 

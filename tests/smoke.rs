@@ -55,7 +55,7 @@ impl DriftScan {
         }
         assert!(
             violations.is_empty(),
-            "terminal prompt-gate vocabulary belongs to persona-terminal:\n{}",
+            "terminal prompt-gate vocabulary belongs to terminal:\n{}",
             violations.join("\n")
         );
     }
