@@ -22,13 +22,13 @@ path = "src/daemon_main.rs"
 
 [dependencies]
 kameo                 = { version = "0.20", default-features = false, features = ["macros", "tracing"] }
-nota-codec            = { git = "https://github.com/LiGoldragon/nota-codec.git", branch = "main" }
+nota-next             = { git = "https://github.com/LiGoldragon/nota-next.git", branch = "main" }
 rkyv                  = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
 serde                 = { version = "1", features = ["derive"] }
 serde_json            = "1"
+signal-engine-management = { git = "https://github.com/LiGoldragon/signal-engine-management.git", branch = "main" }
 signal-frame          = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "main" }
-signal-persona        = { git = "https://github.com/LiGoldragon/signal-persona.git" }
-signal-persona-origin = { git = "https://github.com/LiGoldragon/signal-persona-origin.git" }
+signal-persona-origin = { git = "https://github.com/LiGoldragon/signal-persona-origin.git", branch = "main" }
 signal-system         = { git = "https://github.com/LiGoldragon/signal-system.git", branch = "main" }
 thiserror             = "2"
 tokio                 = { version = "1", features = ["rt-multi-thread", "macros"] }

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::io::{BufRead, Write};
 use std::process::{Command, Stdio};
 
-use nota_codec::{Encoder, NotaEncode};
+use nota_next::NotaEncode;
 use serde::Deserialize;
 
 use crate::error::{Error, Result};
@@ -432,15 +432,13 @@ impl ObservationLine {
         Self { observation }
     }
 
-    fn text(&self) -> Result<String> {
-        let mut encoder = Encoder::new();
+    fn text(&self) -> String {
         let event = SystemEvent::FocusObservation(self.observation);
-        event.encode(&mut encoder)?;
-        Ok(encoder.into_string())
+        event.to_nota()
     }
 
     fn write(&self, mut output: impl Write) -> Result<()> {
-        writeln!(output, "{}", self.text()?)?;
+        writeln!(output, "{}", self.text())?;
         Ok(())
     }
 }

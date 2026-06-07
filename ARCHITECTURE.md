@@ -57,9 +57,10 @@ The component skeleton is honest:
    `SystemDaemonConfiguration` file at startup, rejects inline NOTA and
    `.nota` startup files, and binds `system.sock` at the managed socket mode
    carried by that record.
-2. The daemon answers `signal-persona::SupervisionRequest` from a
-   `SupervisionPhase` actor — `ComponentReady { component_started_at }` once
-   the socket is bound; `ComponentHealthReport { health: Running }`.
+2. The daemon answers `signal-engine-management::Operation` requests
+   from a `SupervisionPhase` actor — `ComponentReady {
+   component_started_at }` once the socket is bound;
+   `ComponentHealthReport { health: Running }`.
 3. The daemon returns `SystemReply::SystemRequestUnimplemented` for every
    unbuilt domain request (`WatchFocus`, `UnwatchFocus`, `QueryFocus`). The
    contract decodes each variant; the reply is typed and closed, never a hang
@@ -201,5 +202,5 @@ tests/             smoke, daemon, and actor-runtime constraint tests
 
 - `../router/ARCHITECTURE.md`
 - `../harness/ARCHITECTURE.md`
-- `../signal-persona/ARCHITECTURE.md`
+- `../signal-engine-management/ARCHITECTURE.md`
 - `../signal-system/ARCHITECTURE.md`

@@ -6,19 +6,17 @@ use std::process::{Child, Command};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use signal_engine_management::{
+    ComponentHealth, ComponentKind, ComponentName, EngineManagementProtocolVersion,
+    Frame as SupervisionFrame, FrameBody as SupervisionFrameBody, Operation as SupervisionRequest,
+    Presence, Query as SupervisionQuery, Reply as SupervisionReply, SocketMode as WireSocketMode,
+    WirePath,
+};
 use signal_frame::{
     ExchangeIdentifier as FrameExchangeIdentifier, ExchangeIdentifier,
     ExchangeLane as FrameExchangeLane, ExchangeLane, LaneSequence as FrameLaneSequence,
     LaneSequence, NonEmpty, Reply, Request as FrameRequest, Request as SystemSignalRequest,
     SessionEpoch, SessionEpoch as FrameSessionEpoch, SubReply,
-};
-use signal_persona::engine_management::{
-    Frame as SupervisionFrame, FrameBody as SupervisionFrameBody, Operation as SupervisionRequest,
-    Presence, Query as SupervisionQuery, Reply as SupervisionReply,
-};
-use signal_persona::{
-    ComponentHealth, ComponentKind, ComponentName, EngineManagementProtocolVersion,
-    SocketMode as WireSocketMode, WirePath,
 };
 use signal_persona_origin::{OwnerIdentity, UnixUserIdentifier};
 use signal_system::{

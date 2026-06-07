@@ -50,8 +50,8 @@ pub enum Error {
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
 
-    #[error("nota error: {0}")]
-    Nota(#[from] nota_codec::Error),
+    #[error("nota decode: {0}")]
+    Nota(#[from] nota_next::NotaDecodeError),
 
     #[error("failed to read system daemon configuration {path:?}: {source}")]
     ConfigurationRead {

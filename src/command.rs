@@ -2,7 +2,7 @@ use std::ffi::OsString;
 use std::io::Write;
 use std::path::PathBuf;
 
-use nota_codec::{Decoder, Encoder, NotaDecode, NotaEncode};
+use nota_next::{NotaEncode, NotaSource};
 use signal_system::{
     SystemHealth, SystemReadiness, SystemReply, SystemRequest, SystemRequestUnimplemented,
     SystemStatus, SystemUnimplementedReason,
@@ -109,14 +109,12 @@ impl NotaLine {
         Self { reply }
     }
 
-    pub fn text(&self) -> Result<String> {
-        let mut encoder = Encoder::new();
-        self.reply.encode(&mut encoder)?;
-        Ok(encoder.into_string())
+    pub fn text(&self) -> String {
+        self.reply.to_nota()
     }
 
     pub fn write(&self, mut output: impl Write) -> Result<()> {
-        writeln!(output, "{}", self.text()?)?;
+        writeln!(output, "{}", self.text())?;
         Ok(())
     }
 }
@@ -150,8 +148,7 @@ impl<'a> SystemRequestText<'a> {
     }
 
     fn decode(&self) -> Result<SystemRequest> {
-        let mut decoder = Decoder::new(self.text);
-        Ok(SystemRequest::decode(&mut decoder)?)
+        NotaSource::new(self.text).parse().map_err(Into::into)
     }
 }
 
