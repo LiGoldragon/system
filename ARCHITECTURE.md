@@ -6,12 +6,10 @@
 forcing router or harness code to know about Niri, Wayland, macOS, or any other
 backend.
 
-> **Scope.** Any "sema" reference here means today's `sema` library
-> (rename pending → `sema-db`). The eventual `Sema` is broader;
-> today's system is a realization step on the
-> eventually-self-hosting stack (eventually the OS itself is in Sema,
-> at which point this OS-boundary layer goes away). See
-> `~/primary/ESSENCE.md` §"Today and eventually".
+> **Scope.** System has no durable store today. If it later owns durable
+> subscription registrations, backend cursors, or adapter state, that state
+> lives in `system.sema` opened through `sema-engine`; the daemon does not
+> touch raw redb or another component's Sema store.
 
 ## 0 · TL;DR
 
@@ -126,8 +124,8 @@ owned by `terminal` and `terminal-cell` through the
 Durable consumer history is not owned here; consumers that need history persist
 it through their own Sema database. If `system` later needs durable
 subscription registrations, backend cursors, or adapter state, it owns a
-system-scoped Sema database for that state rather than writing into another
-component's database.
+system-scoped Sema database through `sema-engine` for that state rather than
+writing into another component's database.
 
 ## 3 · Boundaries
 

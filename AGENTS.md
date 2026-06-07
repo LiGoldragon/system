@@ -19,5 +19,6 @@ concrete.
 - Use Rust 2024 and keep verbs on data-bearing objects.
 - No polling. Subscribe to system events or defer work until a producer pushes
   the next signal.
-- State storage is `redb + rkyv` when this crate owns durable state. This crate
-  should usually define system contracts, not own router state.
+- State storage is `system.sema` through `sema-engine` when this crate owns
+  durable state. This crate should usually define system contracts, not own
+  router state.
