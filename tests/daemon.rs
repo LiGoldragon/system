@@ -6,20 +6,18 @@ use std::process::{Child, Command};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use signal_core::{
-    ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Operation, Reply, Request,
-    RequestRejectionReason, SessionEpoch, SignalVerb, SubReply,
-};
 use signal_frame::{
     ExchangeIdentifier as FrameExchangeIdentifier, ExchangeLane as FrameExchangeLane,
-    LaneSequence as FrameLaneSequence, Request as FrameRequest, SessionEpoch as FrameSessionEpoch,
+    ExchangeIdentifier, ExchangeLane, LaneSequence as FrameLaneSequence, LaneSequence, NonEmpty,
+    Reply, Request as FrameRequest, Request as SystemSignalRequest, SessionEpoch,
+    SessionEpoch as FrameSessionEpoch, SubReply,
 };
 use signal_persona::engine_management::{
     Frame as SupervisionFrame, FrameBody as SupervisionFrameBody, Operation as SupervisionRequest,
-    Query as SupervisionQuery, Reply as SupervisionReply,
+    Presence, Query as SupervisionQuery, Reply as SupervisionReply,
 };
 use signal_persona::{
-    ComponentHealth, ComponentKind, ComponentName, EngineManagementProtocolVersion, Presence,
+    ComponentHealth, ComponentKind, ComponentName, EngineManagementProtocolVersion,
     SocketMode as WireSocketMode, WirePath,
 };
 use signal_persona_origin::{OwnerIdentity, UnixUserIdentifier};
@@ -142,13 +140,15 @@ fn system_daemon_configuration_rejects_nota_arguments() {
 }
 
 #[test]
-fn system_frame_codec_rejects_mismatched_signal_verb() {
-    let request = Request::from_operations(NonEmpty::single(Operation::new(
-        SignalVerb::Assert,
-        SystemRequest::SystemStatusQuery(SystemStatusQuery {
+fn system_frame_codec_rejects_multi_payload_system_requests() {
+    let request = SystemSignalRequest::from_payloads(NonEmpty::from_head_and_tail(
+        SystemRequest::QueryStatus(SystemStatusQuery {
             backend: SystemBackend::Niri,
         }),
-    )));
+        vec![SystemRequest::QueryStatus(SystemStatusQuery {
+            backend: SystemBackend::Niri,
+        })],
+    ));
     let frame = SystemFrame::new(SystemFrameBody::Request {
         exchange: test_exchange(),
         request,
@@ -157,12 +157,12 @@ fn system_frame_codec_rejects_mismatched_signal_verb() {
     let mut input = bytes.as_slice();
     let error = SystemFrameCodec::default()
         .read_request(&mut input)
-        .expect_err("mismatched verb is rejected");
+        .expect_err("multi-payload request is rejected");
 
     assert!(matches!(
         error,
         system::Error::UnexpectedSignalFrame { got }
-            if got == RequestRejectionReason::VerbPayloadMismatch { index: 0 }.to_string()
+            if got == "expected one system payload, got 2"
     ));
 }
 
@@ -178,7 +178,7 @@ fn system_daemon_answers_status_readiness() {
     let mut stream = UnixStream::connect(socket).expect("client connects");
     write_request(
         &mut stream,
-        SystemRequest::SystemStatusQuery(SystemStatusQuery {
+        SystemRequest::QueryStatus(SystemStatusQuery {
             backend: SystemBackend::Niri,
         }),
     );
@@ -329,7 +329,7 @@ fn system_daemon_returns_typed_unimplemented() {
     let mut stream = UnixStream::connect(socket).expect("client connects");
     write_request(
         &mut stream,
-        SystemRequest::FocusSubscription(FocusSubscription {
+        SystemRequest::WatchFocus(FocusSubscription {
             target: SystemTarget::niri_window(223),
         }),
     );
@@ -340,7 +340,7 @@ fn system_daemon_returns_typed_unimplemented() {
         .expect("daemon handles one request");
 
     let expected = SystemReply::SystemRequestUnimplemented(SystemRequestUnimplemented {
-        operation: SystemOperationKind::FocusSubscription,
+        operation: SystemOperationKind::WatchFocus,
         reason: SystemUnimplementedReason::NotBuiltYet,
     });
     assert_eq!(reply, expected);
@@ -350,7 +350,7 @@ fn system_daemon_returns_typed_unimplemented() {
 fn write_request(stream: &mut UnixStream, request: SystemRequest) {
     let frame = SystemFrame::new(SystemFrameBody::Request {
         exchange: test_exchange(),
-        request: Request::from_payload(request),
+        request: SystemSignalRequest::from_payload(request),
     });
     let bytes = frame.encode_length_prefixed().expect("request encodes");
     stream.write_all(&bytes).expect("request writes");
@@ -378,7 +378,7 @@ fn read_reply(stream: &mut UnixStream) -> SystemReply {
     match frame.into_body() {
         SystemFrameBody::Reply { reply, .. } => match reply {
             Reply::Accepted { per_operation, .. } => match per_operation.into_head() {
-                SubReply::Ok { payload, .. } => payload,
+                SubReply::Ok(payload) => payload,
                 other => panic!("expected ok system sub-reply, got {other:?}"),
             },
             Reply::Rejected { reason } => panic!("expected accepted reply, got {reason:?}"),

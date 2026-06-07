@@ -26,7 +26,6 @@ nota-codec            = { git = "https://github.com/LiGoldragon/nota-codec.git",
 rkyv                  = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
 serde                 = { version = "1", features = ["derive"] }
 serde_json            = "1"
-signal-core           = { git = "https://github.com/LiGoldragon/signal-core.git" }
 signal-frame          = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "main" }
 signal-persona        = { git = "https://github.com/LiGoldragon/signal-persona.git" }
 signal-persona-origin = { git = "https://github.com/LiGoldragon/signal-persona-origin.git" }

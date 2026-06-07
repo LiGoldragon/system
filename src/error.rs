@@ -21,7 +21,7 @@ pub enum Error {
     ActorCall { detail: String },
 
     #[error("signal frame: {0}")]
-    SignalFrame(#[from] signal_core::FrameError),
+    SignalFrame(#[from] signal_frame::FrameError),
 
     #[error("daemon argument: {0}")]
     Argument(#[from] triad_runtime::ArgumentError),

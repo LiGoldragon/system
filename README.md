@@ -17,11 +17,11 @@ owned by `persona-terminal` / `terminal-cell` through
 The `system` CLI accepts one NOTA command:
 
 ```sh
-system '(ObserveFocus (NiriWindow 198))'
-system '(FocusSubscription (NiriWindow 198))'
+system '(QueryFocus ((NiriWindow 198)))'
+system '(WatchFocus ((NiriWindow 198)))'
 ```
 
-`ObserveFocus` reads `niri msg --json windows` once. `FocusSubscription` emits
+`QueryFocus` reads `niri msg --json windows` once. `WatchFocus` emits
 an initial `FocusObservation` and then follows `niri msg --json event-stream`,
 filtering noisy compositor events through the Kameo `FocusTracker` actor that
 owns the tracked window state.

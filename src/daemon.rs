@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use kameo::actor::{Actor, ActorRef, Spawn};
 use kameo::error::Infallible;
 use kameo::message::{Context, Message};
-use signal_core::{ExchangeIdentifier, NonEmpty, Reply, SignalVerb, SubReply};
+use signal_frame::{ExchangeIdentifier, NonEmpty, Reply, SubReply};
 use signal_system::{
     SystemBackend, SystemDaemonConfiguration, SystemFrame, SystemFrameBody as FrameBody,
     SystemHealth, SystemOperationKind, SystemReadiness, SystemReply, SystemRequest,
@@ -117,7 +117,7 @@ impl SystemDaemon {
                 .reply_for_request(request.request)
                 .await
         })?;
-        connection.write_signal_reply(request.exchange, request.verb, reply.clone())?;
+        connection.write_signal_reply(request.exchange, reply.clone())?;
         Ok(reply)
     }
 }
@@ -191,11 +191,10 @@ impl SystemConnection {
     pub fn write_signal_reply(
         &mut self,
         exchange: ExchangeIdentifier,
-        verb: SignalVerb,
         reply: SystemReply,
     ) -> Result<()> {
         let stream = self.stream.get_mut();
-        self.signal.write_reply(stream, exchange, verb, reply)
+        self.signal.write_reply(stream, exchange, reply)
     }
 }
 
@@ -230,21 +229,15 @@ impl SystemFrameCodec {
     pub fn read_request(&self, reader: &mut impl Read) -> Result<ReceivedSystemRequest> {
         match self.read_frame(reader)?.into_body() {
             FrameBody::Request { exchange, request } => {
-                let checked = request.into_checked().map_err(|(error, _request)| {
-                    Error::UnexpectedSignalFrame {
-                        got: error.to_string(),
-                    }
-                })?;
-                let (operation, tail) = checked.operations.into_head_and_tail();
+                let (request, tail) = request.payloads.into_head_and_tail();
                 if !tail.is_empty() {
                     return Err(Error::UnexpectedSignalFrame {
-                        got: format!("expected one system operation, got {}", tail.len() + 1),
+                        got: format!("expected one system payload, got {}", tail.len() + 1),
                     });
                 }
                 Ok(ReceivedSystemRequest {
                     exchange,
-                    verb: operation.verb,
-                    request: operation.payload,
+                    request,
                 })
             }
             other => Err(Error::UnexpectedSignalFrame {
@@ -257,15 +250,11 @@ impl SystemFrameCodec {
         &self,
         writer: &mut impl Write,
         exchange: ExchangeIdentifier,
-        verb: SignalVerb,
         system_reply: SystemReply,
     ) -> Result<()> {
         let frame = SystemFrame::new(FrameBody::Reply {
             exchange,
-            reply: Reply::completed(NonEmpty::single(SubReply::Ok {
-                verb,
-                payload: system_reply,
-            })),
+            reply: Reply::committed(NonEmpty::single(SubReply::Ok(system_reply))),
         });
         let bytes = frame.encode_length_prefixed()?;
         writer.write_all(&bytes)?;
@@ -277,7 +266,6 @@ impl SystemFrameCodec {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReceivedSystemRequest {
     exchange: ExchangeIdentifier,
-    verb: SignalVerb,
     request: SystemRequest,
 }
 
@@ -413,7 +401,7 @@ impl SystemRequestHandler {
                 detail: error.to_string(),
             })?;
         match request {
-            SystemRequest::SystemStatusQuery(query) => self.status_reply(query).await,
+            SystemRequest::QueryStatus(query) => self.status_reply(query).await,
             other => Ok(SystemReply::SystemRequestUnimplemented(
                 SystemRequestUnimplemented {
                     operation: other.operation_kind(),

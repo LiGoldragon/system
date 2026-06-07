@@ -15,12 +15,12 @@ fn focus_observation_protects_owned_window() {
 }
 
 #[test]
-fn system_input_uses_noun_form_focus_subscription() {
-    let mut decoder = Decoder::new("(FocusSubscription ((NiriWindow 198)))");
+fn system_input_uses_contract_local_watch_focus_operation() {
+    let mut decoder = Decoder::new("(WatchFocus ((NiriWindow 198)))");
     let request = SystemRequest::decode(&mut decoder).expect("contract focus subscription decodes");
 
-    let SystemRequest::FocusSubscription(FocusSubscription { target }) = request else {
-        panic!("decoded input should be FocusSubscription");
+    let SystemRequest::WatchFocus(FocusSubscription { target }) = request else {
+        panic!("decoded input should be WatchFocus");
     };
     assert_eq!(target, SystemTarget::niri_window(198));
 }

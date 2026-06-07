@@ -61,9 +61,9 @@ The component skeleton is honest:
    `SupervisionPhase` actor — `ComponentReady { component_started_at }` once
    the socket is bound; `ComponentHealthReport { health: Running }`.
 3. The daemon returns `SystemReply::SystemRequestUnimplemented` for every
-   unbuilt domain request (`FocusSubscription`, `FocusSubscriptionRetraction`,
-   `FocusSnapshot`). The contract decodes each variant; the reply is typed
-   and closed, never a hang or untyped text error.
+   unbuilt domain request (`WatchFocus`, `UnwatchFocus`, `QueryFocus`). The
+   contract decodes each variant; the reply is typed and closed, never a hang
+   or untyped text error.
 4. `FocusTracker` is a real Kameo actor with `target`, `id`, `last`,
    `generations`, `workspace_id`, `synthetic_generation`,
    `applied_event_count`, and `emitted_observation_count` state. Niri
@@ -85,16 +85,16 @@ The component skeleton is honest:
 **Subscription lifecycle applies when unpausing.** Focus subscription close
 follows the canonical five-state FSM named in
 `~/primary/skills/subscription-lifecycle.md`: typed
-`Subscribe FocusSubscription` request returns a typed
+`WatchFocus(FocusSubscription)` request returns a typed
 `SubscriptionAccepted` snapshot reply carrying the per-stream
 `FocusSubscriptionToken`; the producer pushes typed `FocusObservation` /
 `WindowClosed` events on the `FocusEventStream`; the consumer sends a typed
-`Retract FocusSubscriptionRetraction(FocusSubscriptionToken)` request to
+`UnwatchFocus(FocusSubscriptionToken)` request to
 close; the producer emits a final `SubscriptionRetracted` reply carrying
-the same token; the stream ends. Both the request-side retract verb and
+the same token; the stream ends. Both the request-side close operation and
 the reply-side acknowledgement are first-class. The `signal_channel!`
 macro at `signal-system/src/lib.rs:303-330` enforces the pairing:
-the `close FocusSubscriptionRetraction` line in the stream block emits
+the `close UnwatchFocus` line in the stream block emits
 the typed `closed_stream()` discriminant. Raw socket close is not
 semantic protocol.
 
@@ -158,7 +158,7 @@ or `SystemRequest`.
 - The daemon accepts the `signal-system` frame boundary.
 - The daemon applies the managed spawn-envelope socket mode to `system.sock`
   before accepting client traffic.
-- The daemon answers `SystemStatusQuery` with typed health and readiness.
+- The daemon answers `QueryStatus(SystemStatusQuery)` with typed health and readiness.
 - A recognized but unbuilt daemon request returns
   `SystemRequestUnimplemented`; it must not hang or print an untyped text
   error.
