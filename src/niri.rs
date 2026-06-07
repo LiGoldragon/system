@@ -205,7 +205,7 @@ pub enum NiriEvent {
 impl NiriEvent {
     pub fn from_json_str(text: &str) -> Result<Self> {
         let value: serde_json::Value = serde_json::from_str(text)?;
-        Ok(NiriEventJson::new(value).decode()?)
+        NiriEventJson::new(value).decode()
     }
 
     fn windows(&self) -> Vec<&NiriWindowSnapshot> {

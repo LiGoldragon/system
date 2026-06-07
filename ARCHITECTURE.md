@@ -13,8 +13,6 @@ backend.
 > at which point this OS-boundary layer goes away). See
 > `~/primary/ESSENCE.md` §"Today and eventually".
 
----
-
 ## 0 · TL;DR
 
 This repo owns system observations as pushed events and privileged OS actions
@@ -55,9 +53,10 @@ marker) ready for the Niri event-stream path that activates on unpause.
 
 The component skeleton is honest:
 
-1. The daemon reads its `signal-persona::SpawnEnvelope` at startup and binds
-   `system.sock` at mode 0600 by applying the `PERSONA_SOCKET_MODE` value
-   from that envelope.
+1. The daemon reads exactly one signal-encoded/rkyv
+   `SystemDaemonConfiguration` file at startup, rejects inline NOTA and
+   `.nota` startup files, and binds `system.sock` at the managed socket mode
+   carried by that record.
 2. The daemon answers `signal-persona::SupervisionRequest` from a
    `SupervisionPhase` actor — `ComponentReady { component_started_at }` once
    the socket is bound; `ComponentHealthReport { health: Running }`.

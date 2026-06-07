@@ -15,7 +15,10 @@ passes, and `FocusTracker` exists today as a real data-bearing Kameo actor ready
 Niri event-stream path that activates on unpause. The skeleton is honest: the daemon reads
 its spawn envelope, binds `system.sock` at the managed socket mode, answers supervision
 status/readiness, and returns a typed `SystemRequestUnimplemented` for every unbuilt domain
-request rather than hanging or printing untyped text.
+request rather than hanging or printing untyped text. `system-daemon`
+starts from exactly one signal-encoded/rkyv
+`SystemDaemonConfiguration` file and rejects inline NOTA and `.nota`
+startup files.
 
 Key constraints: producers push events; consumers subscribe — unknown system state is
 explicit typed state, never a reason to poll. Read-only observations and privileged actions

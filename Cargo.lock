@@ -3,6 +3,12 @@
 version = 4
 
 [[package]]
+name = "bitflags"
+version = "2.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4388bee8683e3d04af747c73422af53102d2bd24d9eadb6cbc100baef4b43f8"
+
+[[package]]
 name = "bumpalo"
 version = "3.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -66,6 +72,16 @@ name = "equivalent"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
+
+[[package]]
+name = "errno"
+version = "0.3.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
+dependencies = [
+ "libc",
+ "windows-sys",
+]
 
 [[package]]
 name = "futures"
@@ -223,6 +239,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "libc"
+version = "0.2.186"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68ab91017fe16c622486840e4c83c9a37afeff978bd239b5293d61ece587de66"
+
+[[package]]
+name = "linux-raw-sys"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
+
+[[package]]
 name = "memchr"
 version = "2.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -251,7 +279,7 @@ dependencies = [
 [[package]]
 name = "nota-codec"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/nota-codec.git?branch=main#538555e895529e2884b7d37d20c66aadc2a49c08"
+source = "git+https://github.com/LiGoldragon/nota-codec.git?branch=main#f761421c383121a04df761a444a3778d1c0b137d"
 dependencies = [
  "camino",
  "nota-derive",
@@ -271,7 +299,7 @@ dependencies = [
 [[package]]
 name = "nota-derive"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/nota-derive.git?branch=main#8323149593b95d6e90c1fdde54e9aba58803337c"
+source = "git+https://github.com/LiGoldragon/nota-derive.git?branch=main#11347da1ff4425ff4e743c15a3e3ec322b54ea9a"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -383,10 +411,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustix"
+version = "1.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6fe4565b9518b83ef4f91bb47ce29620ca828bd32cb7e408f0062e9930ba190"
+dependencies = [
+ "bitflags",
+ "errno",
+ "libc",
+ "linux-raw-sys",
+ "windows-sys",
+]
+
+[[package]]
 name = "rustversion"
 version = "1.0.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
+
+[[package]]
+name = "schema"
+version = "0.1.0"
+source = "git+https://github.com/LiGoldragon/schema.git?branch=main#bfe4ff40a1dca39cbc55f8cd5785a06ff2497abd"
+dependencies = [
+ "nota-codec",
+]
+
+[[package]]
+name = "schema-rust"
+version = "0.1.0"
+source = "git+https://github.com/LiGoldragon/signal-frame.git?branch=main#6f5a77f11115c043b93d005086cda8cbec349cd4"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "schema",
+]
 
 [[package]]
 name = "serde"
@@ -455,7 +514,7 @@ dependencies = [
 [[package]]
 name = "signal-frame"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/signal-frame.git?branch=main#2313c5ed41d156eb916934f7a0b23e07c7d7209c"
+source = "git+https://github.com/LiGoldragon/signal-frame.git?branch=main#6f5a77f11115c043b93d005086cda8cbec349cd4"
 dependencies = [
  "nota-codec",
  "paste",
@@ -467,10 +526,13 @@ dependencies = [
 [[package]]
 name = "signal-frame-macros"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/signal-frame.git?branch=main#2313c5ed41d156eb916934f7a0b23e07c7d7209c"
+source = "git+https://github.com/LiGoldragon/signal-frame.git?branch=main#6f5a77f11115c043b93d005086cda8cbec349cd4"
 dependencies = [
+ "nota-codec",
  "proc-macro2",
  "quote",
+ "schema",
+ "schema-rust",
  "syn",
 ]
 
@@ -489,7 +551,7 @@ dependencies = [
 [[package]]
 name = "signal-persona-origin"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/signal-persona-origin.git#2e949ed0064f2c0ecc1c8f6e4bb9eba8300858bb"
+source = "git+https://github.com/LiGoldragon/signal-persona-origin.git#837a6c6d2bac56974dbd13c47496a2d0d93b701d"
 dependencies = [
  "nota-codec",
  "rkyv",
@@ -548,7 +610,7 @@ version = "0.1.0"
 dependencies = [
  "kameo",
  "nota-codec",
- "nota-config",
+ "rkyv",
  "serde",
  "serde_json",
  "signal-core",
@@ -558,6 +620,7 @@ dependencies = [
  "signal-system",
  "thiserror",
  "tokio",
+ "triad-runtime",
 ]
 
 [[package]]
@@ -649,6 +712,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "triad-runtime"
+version = "0.2.1"
+source = "git+https://github.com/LiGoldragon/triad-runtime.git?branch=main#cdda1b1f95283f36d488fa2435281e6201fe7fdb"
+dependencies = [
+ "rustix",
+ "signal-frame",
+ "thiserror",
+]
+
+[[package]]
 name = "unicode-ident"
 version = "1.0.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -707,6 +780,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a929b2c61f11ba3e9bc35b50c1f25cb38e0e892c0c231ae2b8cf78d5dad4437"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "windows-link"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
+
+[[package]]
+name = "windows-sys"
+version = "0.61.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc"
+dependencies = [
+ "windows-link",
 ]
 
 [[package]]

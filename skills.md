@@ -6,6 +6,9 @@ events, target identity, or backend adapters.
 Rules for work here:
 
 - Model observations as typed pushed events.
+- `system-daemon` starts from exactly one signal-encoded/rkyv
+  `SystemDaemonConfiguration` file. Inline NOTA and `.nota` startup files
+  belong to deploy/CLI tooling and are rejected before daemon construction.
 - Keep backend handles inside data-bearing adapter objects.
 - Keep routing decisions in `persona-router`.
 - Keep terminal PTY byte transport in `persona-terminal`.

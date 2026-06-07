@@ -23,7 +23,7 @@ path = "src/daemon_main.rs"
 [dependencies]
 kameo                 = { version = "0.20", default-features = false, features = ["macros", "tracing"] }
 nota-codec            = { git = "https://github.com/LiGoldragon/nota-codec.git", branch = "main" }
-nota-config           = { git = "https://github.com/LiGoldragon/nota-config.git", branch = "main" }
+rkyv                  = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
 serde                 = { version = "1", features = ["derive"] }
 serde_json            = "1"
 signal-core           = { git = "https://github.com/LiGoldragon/signal-core.git" }
@@ -33,8 +33,9 @@ signal-persona-origin = { git = "https://github.com/LiGoldragon/signal-persona-o
 signal-system         = { git = "https://github.com/LiGoldragon/signal-system.git", branch = "main" }
 thiserror             = "2"
 tokio                 = { version = "1", features = ["rt-multi-thread", "macros"] }
+triad-runtime         = { git = "https://github.com/LiGoldragon/triad-runtime.git", branch = "main" }
 
 [lints.rust]
 unsafe_code = "forbid"
-unused = "warn"
-dead_code = "warn"
+unused = { level = "warn", priority = -1 }
+dead_code = { level = "warn", priority = -1 }

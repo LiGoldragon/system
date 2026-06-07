@@ -1,5 +1,6 @@
 pub mod command;
 pub mod daemon;
+pub mod daemon_command;
 pub mod error;
 pub mod event;
 pub mod niri;
@@ -12,6 +13,7 @@ pub use daemon::{
     BoundSystemDaemon, SocketMode, SystemCommandLine, SystemConnection, SystemDaemon,
     SystemFrameCodec, SystemRequestHandler, SystemState, SystemSupervisor,
 };
+pub use daemon_command::{SystemDaemonCommand, SystemDaemonConfigurationFile};
 pub use error::Error;
 pub use event::FocusState;
 pub use niri::{FocusTracker, NiriEvent, NiriFocusSource, NiriWindowSnapshot, NiriWindows};
