@@ -1,8 +1,6 @@
-use system::SystemDaemonCommand;
+use system::SystemDaemon;
+use system::schema::daemon::DaemonEntry;
 
-fn main() {
-    if let Err(error) = SystemDaemonCommand::from_environment().run() {
-        eprintln!("system-daemon: {error}");
-        std::process::exit(1);
-    }
+fn main() -> std::process::ExitCode {
+    <SystemDaemon as DaemonEntry>::run_to_exit_code()
 }

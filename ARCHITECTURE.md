@@ -49,14 +49,30 @@ the prototype's "all six daemons ready" witness passes, and the FocusTracker
 exists today as a real Kameo actor (state-bearing, message-driven, not a
 marker) ready for the Niri event-stream path that activates on unpause.
 
+The daemon runs on the **schema-emitted daemon shell** (`schema-rust-next`
+`NexusDaemonShape` + `GenerationDriver`, mirrored on `orchestrate`). The
+emitter owns argv parsing, async task-backed multi-listener binding, request
+gating, peer credentials, lifecycle, and the `ExitReport` entry in
+`src/schema/daemon.rs`; system hand-writes only the `ComponentDaemon` hook
+surface in `src/daemon.rs`. system adopts the **`component_decoded` working
+tier**: the ordinary `system.sock` keeps speaking the `signal-system` contract
+`SystemFrame` (the component owns the per-connection decode) wrapped in the
+emitted length-prefixed envelope, and the owner-only **meta** listener carries
+the engine-management supervision protocol. The existing Kameo actors stay the
+engine, shared as `&Self::Engine` and lazily started inside the daemon's tokio
+runtime; their mailboxes serialise every exchange with no component-internal
+lock.
+
 The component skeleton is honest:
 
 1. The daemon reads exactly one signal-encoded/rkyv
    `SystemDaemonConfiguration` file at startup, rejects inline NOTA and
    `.nota` startup files, and binds `system.sock` at the managed socket mode
-   carried by that record.
-2. The daemon answers `signal-engine-management::Operation` requests
-   from a `SupervisionPhase` actor — `ComponentReady {
+   carried by that record — all through the emitted `DaemonCommand` /
+   `DaemonBinder` and system's `Configuration: triad_runtime::DaemonConfiguration`.
+2. The daemon answers engine-management supervision requests
+   (`signal-persona::Operation`, the consolidated supervision contract) from a
+   `SupervisionPhase` actor over the owner-only meta socket — `ComponentReady {
    component_started_at }` once the socket is bound;
    `ComponentHealthReport { health: Running }`.
 3. The daemon returns `SystemReply::SystemRequestUnimplemented` for every
@@ -177,13 +193,20 @@ or `SystemRequest`.
 ## Code Map
 
 ```text
-src/command.rs     NOTA CLI command surface over `SystemRequest`
-src/daemon.rs      socket daemon skeleton over `signal-system::Frame`
-src/event.rs       local focus-state helpers only
-src/niri.rs        Niri focus snapshot and event-stream adapter
-src/niri_focus.rs  Kameo mailbox implementation for `FocusTracker`
-src/target.rs      local harness-to-system-target helper
-tests/             smoke, daemon, and actor-runtime constraint tests
+src/command.rs       NOTA CLI command surface over `SystemRequest`
+src/configuration.rs `Configuration` over `signal-system::SystemDaemonConfiguration`,
+                     `impl triad_runtime::DaemonConfiguration`
+src/daemon.rs        the hand-written `ComponentDaemon` hook surface — engine
+                     wiring + the component_decoded working/meta connection hooks
+src/schema/daemon.rs schema-emitted daemon shell (argv, listeners, lifecycle)
+src/supervisor.rs    `SystemSupervisor` Kameo actor + `SystemRequestHandler`
+src/supervision.rs   `SupervisionPhase` engine-management actor + frame decode
+src/event.rs         local focus-state helpers only
+src/niri.rs          Niri focus snapshot and event-stream adapter (serde_json IPC)
+src/niri_focus.rs    Kameo mailbox implementation for `FocusTracker`
+src/target.rs        local harness-to-system-target helper
+schema/nexus.schema  no-stream nexus schema the daemon emitter reads
+tests/               smoke, daemon, and actor-runtime constraint tests
 ```
 
 ## Constraint Witnesses
@@ -200,5 +223,6 @@ tests/             smoke, daemon, and actor-runtime constraint tests
 
 - `../router/ARCHITECTURE.md`
 - `../harness/ARCHITECTURE.md`
-- `../signal-engine-management/ARCHITECTURE.md`
+- `../orchestrate/ARCHITECTURE.md` — the daemon-shell port template
+- `../signal-persona/ARCHITECTURE.md` — the engine-management supervision contract
 - `../signal-system/ARCHITECTURE.md`

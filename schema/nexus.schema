@@ -1,0 +1,14 @@
+{}
+[SignalArrived]
+[ReplyToSignal Continue]
+{
+  SignalArrived SystemToken
+
+  ReplyToSignal SystemToken
+  Continue SystemToken
+
+  NexusWork [(SignalArrived SignalArrived)]
+  NexusAction [(ReplyToSignal ReplyToSignal) (Continue Continue)]
+
+  SystemToken Integer
+}

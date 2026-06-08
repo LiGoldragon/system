@@ -7,6 +7,7 @@ license      = "MIT OR Apache-2.0"
 repository   = "https://github.com/LiGoldragon/system"
 description  = "Portable OS and window-manager boundary for Persona."
 publish      = false
+build        = "build.rs"
 
 [lib]
 name = "system"
@@ -26,13 +27,18 @@ nota-next             = { git = "https://github.com/LiGoldragon/nota-next.git", 
 rkyv                  = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
 serde                 = { version = "1", features = ["derive"] }
 serde_json            = "1"
-signal-engine-management = { git = "https://github.com/LiGoldragon/signal-engine-management.git", branch = "main" }
-signal-frame          = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "main" }
-signal-persona-origin = { git = "https://github.com/LiGoldragon/signal-persona-origin.git", branch = "main" }
+signal-frame          = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "main", features = ["nota-text"] }
+signal-persona        = { git = "https://github.com/LiGoldragon/signal-persona.git", branch = "main" }
 signal-system         = { git = "https://github.com/LiGoldragon/signal-system.git", branch = "main" }
 thiserror             = "2"
-tokio                 = { version = "1", features = ["rt-multi-thread", "macros"] }
+tokio                 = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util"] }
 triad-runtime         = { git = "https://github.com/LiGoldragon/triad-runtime.git", branch = "main" }
+
+[build-dependencies]
+schema-rust-next = { git = "https://github.com/LiGoldragon/schema-rust-next.git", branch = "main" }
+
+[dev-dependencies]
+tempfile = "3"
 
 [lints.rust]
 unsafe_code = "forbid"

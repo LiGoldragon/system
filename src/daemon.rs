@@ -1,233 +1,167 @@
-use std::ffi::OsString;
-use std::io::{BufReader, Read, Write};
-use std::os::unix::fs::PermissionsExt;
-use std::os::unix::net::{UnixListener, UnixStream};
-use std::path::PathBuf;
+//! System's daemon hooks — the only daemon code system hand-writes.
+//!
+//! The uniform daemon skeleton (argv parsing, async task-backed multi-listener
+//! binding, request gating, peer credentials, lifecycle, and the `ExitReport`
+//! entry) is emitted into `src/schema/daemon.rs` by schema-rust-next's daemon
+//! emitter. System adopts the `component_decoded` working tier: the ordinary
+//! `system.sock` keeps speaking the `signal-system` contract wire (the
+//! component owns the per-connection `SystemFrame` decode), and the existing
+//! kameo actors (`SystemSupervisor`, `SupervisionPhase`) stay the engine.
+//!
+//! The owner-only meta listener carries the engine-management supervision
+//! protocol (the second socket the manager binds): `handle_meta_connection`
+//! decodes a supervision `Frame` and drives `SupervisionPhase`.
 
-use kameo::actor::{Actor, ActorRef, Spawn};
-use kameo::error::Infallible;
-use kameo::message::{Context, Message};
+use kameo::actor::ActorRef;
+use tokio::io::AsyncWriteExt;
+use tokio::sync::OnceCell;
+use triad_runtime::{
+    AcceptedConnection, FrameBody as LengthPrefixedFrameBody, FrameError, LengthPrefixedCodec,
+};
+
 use signal_frame::{ExchangeIdentifier, NonEmpty, Reply, SubReply};
 use signal_system::{
-    SystemBackend, SystemDaemonConfiguration, SystemFrame, SystemFrameBody as FrameBody,
-    SystemHealth, SystemOperationKind, SystemReadiness, SystemReply, SystemRequest,
-    SystemRequestUnimplemented, SystemStatus, SystemStatusQuery, SystemUnimplementedReason,
+    SystemBackend, SystemFrame, SystemFrameBody as FrameBody, SystemReply, SystemRequest,
 };
 
 use crate::error::{Error, Result};
-use crate::supervision::{SupervisionListener, SupervisionProfile, SupervisionSocketMode};
+use crate::schema::daemon::ComponentDaemon;
+use crate::supervision::{
+    HandleSupervisionRequest, ReceivedSupervisionRequest, SupervisionPhase, SupervisionProfile,
+};
+use crate::{Configuration, SystemRequestHandler, SystemSupervisor};
 
+/// The type-level selector for system's emitted daemon. It carries no runtime
+/// data — it is the marker the emitted `DaemonCommand<SystemDaemon>` and the
+/// generated runtime dispatch on, selecting system's `Configuration` /
+/// `Engine` / `Error` types through the `ComponentDaemon` associated types.
 #[derive(Debug)]
-pub struct SystemDaemon {
-    socket: PathBuf,
+pub struct SystemDaemon;
+
+/// System's daemon-facing engine: the lazily-started root actors that own all
+/// mutable system state. The `component_decoded` runtime shares this engine as
+/// `&Self::Engine`; the kameo mailboxes serialise each exchange, so no
+/// component-internal lock is required. The actors start on first connection so
+/// `build_runtime` stays synchronous and they spawn inside the daemon's tokio
+/// runtime.
+#[derive(Debug)]
+pub struct SystemEngine {
     backend: SystemBackend,
-    socket_mode: Option<SocketMode>,
-    supervision: Option<SupervisionListener>,
+    profile: SupervisionProfile,
+    supervisor: OnceCell<ActorRef<SystemSupervisor>>,
+    supervision: OnceCell<ActorRef<SupervisionPhase>>,
 }
 
-impl SystemDaemon {
-    /// Canonical constructor — production launch reads a binary
-    /// `SystemDaemonConfiguration` and hands the decoded record here.
-    pub fn from_configuration(configuration: SystemDaemonConfiguration) -> Self {
-        let supervision = SupervisionListener::new(
-            SupervisionProfile::system(),
-            PathBuf::from(configuration.supervision_socket_path.as_str()),
-            SupervisionSocketMode::from_octal(configuration.supervision_socket_mode.into_u32()),
-        );
+impl SystemEngine {
+    pub fn from_configuration(configuration: &Configuration) -> Self {
         Self {
-            socket: PathBuf::from(configuration.system_socket_path.as_str()),
-            backend: configuration.backend,
-            socket_mode: Some(SocketMode::from_octal(
-                configuration.system_socket_mode.into_u32(),
-            )),
-            supervision: Some(supervision),
+            backend: configuration.backend(),
+            profile: SupervisionProfile::system(),
+            supervisor: OnceCell::new(),
+            supervision: OnceCell::new(),
         }
     }
 
-    pub fn from_socket(socket: impl Into<PathBuf>) -> Self {
-        Self {
-            socket: socket.into(),
-            backend: SystemBackend::Niri,
-            socket_mode: SocketMode::from_environment(),
-            supervision: None,
-        }
+    async fn supervisor(&self) -> &ActorRef<SystemSupervisor> {
+        self.supervisor
+            .get_or_init(|| SystemSupervisor::start(self.backend))
+            .await
     }
 
-    pub fn with_backend(mut self, backend: SystemBackend) -> Self {
-        self.backend = backend;
-        self
+    async fn supervision(&self) -> &ActorRef<SupervisionPhase> {
+        self.supervision
+            .get_or_init(|| SupervisionPhase::start(self.profile.clone()))
+            .await
     }
 
-    pub fn with_socket_mode(mut self, socket_mode: SocketMode) -> Self {
-        self.socket_mode = Some(socket_mode);
-        self
+    /// Serve one ordinary working connection: decode a `signal-system`
+    /// `SystemFrame` request off the length-prefixed envelope, drive the
+    /// request through the supervisor, and write the typed reply frame back.
+    async fn handle_working_connection(&self, connection: &mut AcceptedConnection) -> Result<()> {
+        let body = LengthPrefixedCodec::default()
+            .read_body_async(connection.stream_mut())
+            .await?
+            .into_bytes();
+        let received = ReceivedSystemRequest::decode(&body)?;
+        let reply = SystemRequestHandler::new(self.supervisor().await.clone())
+            .reply_for_request(received.request)
+            .await?;
+        WorkingSystemReply::new(received.exchange, reply)
+            .write(connection.stream_mut())
+            .await
     }
 
-    pub fn socket(&self) -> &PathBuf {
-        &self.socket
-    }
-
-    pub fn backend(&self) -> SystemBackend {
-        self.backend
-    }
-
-    pub fn run(self) -> Result<()> {
-        let supervision = self.supervision.clone();
-        let bound = self.bind()?;
-        let _supervision = supervision.map(SupervisionListener::spawn).transpose()?;
-        eprintln!("system-daemon socket={}", bound.socket.display());
-        bound.serve_forever()
-    }
-
-    pub fn bind(self) -> Result<BoundSystemDaemon> {
-        if let Some(parent) = self.socket.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-        let _ = std::fs::remove_file(&self.socket);
-        let listener = UnixListener::bind(&self.socket)?;
-        if let Some(socket_mode) = self.socket_mode {
-            std::fs::set_permissions(
-                &self.socket,
-                std::fs::Permissions::from_mode(socket_mode.as_octal()),
-            )?;
-        }
-        let runtime = tokio::runtime::Runtime::new()?;
-        let system = runtime.block_on(SystemSupervisor::start(self.backend));
-        Ok(BoundSystemDaemon {
-            socket: self.socket,
-            runtime,
-            listener,
-            system,
-        })
-    }
-
-    pub fn serve_one(self) -> Result<SystemReply> {
-        self.bind()?.serve_one()
-    }
-
-    fn handle_connection(
-        runtime: &tokio::runtime::Runtime,
-        system: &ActorRef<SystemSupervisor>,
-        stream: UnixStream,
-    ) -> Result<SystemReply> {
-        let mut connection = SystemConnection::from_stream(stream);
-        let request = connection.read_signal_request()?;
-        let reply = runtime.block_on(async {
-            SystemRequestHandler::new(system.clone())
-                .reply_for_request(request.request)
-                .await
-        })?;
-        connection.write_signal_reply(request.exchange, reply.clone())?;
-        Ok(reply)
+    /// Serve one owner-only supervision (meta) connection: decode an
+    /// engine-management `Frame` request and drive the supervision actor. The
+    /// manager binds this socket to announce, query readiness/health, and stop
+    /// the component.
+    async fn handle_meta_connection(&self, connection: &mut AcceptedConnection) -> Result<()> {
+        let body = LengthPrefixedCodec::default()
+            .read_body_async(connection.stream_mut())
+            .await?
+            .into_bytes();
+        let received = ReceivedSupervisionRequest::decode(&body)?;
+        let reply = self
+            .supervision()
+            .await
+            .ask(HandleSupervisionRequest {
+                request: received.request,
+            })
+            .await
+            .map_err(|error| Error::ActorCall {
+                detail: error.to_string(),
+            })?;
+        WorkingSupervisionReply::new(received.exchange, reply.reply)
+            .write(connection.stream_mut())
+            .await
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct SocketMode(u32);
+impl ComponentDaemon for SystemDaemon {
+    type Configuration = Configuration;
+    type ConfigurationError = Error;
+    type Engine = SystemEngine;
+    type Error = Error;
 
-impl SocketMode {
-    pub const fn from_octal(value: u32) -> Self {
-        Self(value)
+    const PROCESS_NAME: &'static str = "system-daemon";
+
+    fn load_configuration(
+        path: &std::path::Path,
+    ) -> std::result::Result<Self::Configuration, Self::ConfigurationError> {
+        Configuration::from_binary_path(path)
     }
 
-    pub fn from_environment() -> Option<Self> {
-        std::env::var("PERSONA_SOCKET_MODE")
-            .ok()
-            .and_then(|value| u32::from_str_radix(value.as_str(), 8).ok())
-            .map(Self::from_octal)
+    fn build_runtime(
+        configuration: &Self::Configuration,
+    ) -> std::result::Result<Self::Engine, Self::Error> {
+        Ok(SystemEngine::from_configuration(configuration))
     }
 
-    pub const fn as_octal(self) -> u32 {
-        self.0
-    }
-}
-
-pub struct BoundSystemDaemon {
-    socket: PathBuf,
-    runtime: tokio::runtime::Runtime,
-    listener: UnixListener,
-    system: ActorRef<SystemSupervisor>,
-}
-
-impl BoundSystemDaemon {
-    pub fn socket(&self) -> &PathBuf {
-        &self.socket
-    }
-
-    pub fn serve_one(self) -> Result<SystemReply> {
-        let (stream, _address) = self.listener.accept()?;
-        let reply = SystemDaemon::handle_connection(&self.runtime, &self.system, stream)?;
-        self.runtime.block_on(SystemSupervisor::stop(self.system))?;
-        let _ = std::fs::remove_file(&self.socket);
-        Ok(reply)
-    }
-
-    pub fn serve_forever(self) -> Result<()> {
-        for stream in self.listener.incoming() {
-            let stream = stream?;
-            let _ = SystemDaemon::handle_connection(&self.runtime, &self.system, stream)?;
-        }
-        Ok(())
-    }
-}
-
-pub struct SystemConnection {
-    stream: BufReader<UnixStream>,
-    signal: SystemFrameCodec,
-}
-
-impl SystemConnection {
-    pub fn from_stream(stream: UnixStream) -> Self {
-        Self {
-            stream: BufReader::new(stream),
-            signal: SystemFrameCodec::default(),
-        }
-    }
-
-    pub fn read_signal_request(&mut self) -> Result<ReceivedSystemRequest> {
-        self.signal.read_request(&mut self.stream)
-    }
-
-    pub fn write_signal_reply(
-        &mut self,
-        exchange: ExchangeIdentifier,
-        reply: SystemReply,
+    async fn handle_working_connection(
+        engine: &Self::Engine,
+        mut connection: AcceptedConnection,
     ) -> Result<()> {
-        let stream = self.stream.get_mut();
-        self.signal.write_reply(stream, exchange, reply)
+        engine.handle_working_connection(&mut connection).await
+    }
+
+    async fn handle_meta_connection(
+        engine: &Self::Engine,
+        mut connection: AcceptedConnection,
+    ) -> Result<()> {
+        engine.handle_meta_connection(&mut connection).await
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct SystemFrameCodec {
-    maximum_frame_bytes: usize,
+/// One decoded ordinary system request plus its exchange identifier.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReceivedSystemRequest {
+    exchange: ExchangeIdentifier,
+    request: SystemRequest,
 }
 
-impl SystemFrameCodec {
-    pub const fn new(maximum_frame_bytes: usize) -> Self {
-        Self {
-            maximum_frame_bytes,
-        }
-    }
-
-    pub fn read_frame(&self, reader: &mut impl Read) -> Result<SystemFrame> {
-        let mut prefix = [0_u8; 4];
-        reader.read_exact(&mut prefix)?;
-        let length = u32::from_be_bytes(prefix) as usize;
-        if length > self.maximum_frame_bytes {
-            return Err(Error::UnexpectedSignalFrame {
-                got: format!("frame length {length} exceeds {}", self.maximum_frame_bytes),
-            });
-        }
-        let mut bytes = Vec::with_capacity(4 + length);
-        bytes.extend_from_slice(&prefix);
-        bytes.resize(4 + length, 0);
-        reader.read_exact(&mut bytes[4..])?;
-        Ok(SystemFrame::decode_length_prefixed(&bytes)?)
-    }
-
-    pub fn read_request(&self, reader: &mut impl Read) -> Result<ReceivedSystemRequest> {
-        match self.read_frame(reader)?.into_body() {
+impl ReceivedSystemRequest {
+    pub fn decode(body: &[u8]) -> Result<Self> {
+        match SystemFrame::decode(body)?.into_body() {
             FrameBody::Request { exchange, request } => {
                 let (request, tail) = request.payloads.into_head_and_tail();
                 if !tail.is_empty() {
@@ -235,7 +169,7 @@ impl SystemFrameCodec {
                         got: format!("expected one system payload, got {}", tail.len() + 1),
                     });
                 }
-                Ok(ReceivedSystemRequest { exchange, request })
+                Ok(Self { exchange, request })
             }
             other => Err(Error::UnexpectedSignalFrame {
                 got: format!("{other:?}"),
@@ -243,230 +177,61 @@ impl SystemFrameCodec {
         }
     }
 
-    pub fn write_reply(
-        &self,
-        writer: &mut impl Write,
-        exchange: ExchangeIdentifier,
-        system_reply: SystemReply,
-    ) -> Result<()> {
-        let frame = SystemFrame::new(FrameBody::Reply {
-            exchange,
-            reply: Reply::committed(NonEmpty::single(SubReply::Ok(system_reply))),
-        });
-        let bytes = frame.encode_length_prefixed()?;
-        writer.write_all(&bytes)?;
-        writer.flush()?;
-        Ok(())
+    pub fn exchange(&self) -> ExchangeIdentifier {
+        self.exchange
+    }
+
+    pub fn request(&self) -> &SystemRequest {
+        &self.request
     }
 }
 
+/// One ordinary system reply, framed and written back to the caller.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ReceivedSystemRequest {
+pub struct WorkingSystemReply {
     exchange: ExchangeIdentifier,
-    request: SystemRequest,
+    reply: SystemReply,
 }
 
-impl Default for SystemFrameCodec {
-    fn default() -> Self {
-        Self::new(1024 * 1024)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, kameo::Reply)]
-pub struct SystemState {
-    pub backend: SystemBackend,
-    pub served_request_count: u64,
-    pub last_operation: Option<SystemOperationKind>,
-}
-
-#[derive(Debug)]
-pub struct SystemSupervisor {
-    backend: SystemBackend,
-    served_request_count: u64,
-    last_operation: Option<SystemOperationKind>,
-}
-
-impl SystemSupervisor {
-    pub fn new(backend: SystemBackend) -> Self {
-        Self {
-            backend,
-            served_request_count: 0,
-            last_operation: None,
-        }
+impl WorkingSystemReply {
+    pub fn new(exchange: ExchangeIdentifier, reply: SystemReply) -> Self {
+        Self { exchange, reply }
     }
 
-    pub async fn start(backend: SystemBackend) -> ActorRef<Self> {
-        let reference = Self::spawn(backend);
-        reference.wait_for_startup().await;
-        reference
-    }
-
-    pub async fn stop(reference: ActorRef<Self>) -> Result<()> {
-        reference
-            .stop_gracefully()
-            .await
-            .map_err(|error| Error::ActorCall {
-                detail: error.to_string(),
-            })?;
-        reference.wait_for_shutdown().await;
+    async fn write(self, stream: &mut tokio::net::UnixStream) -> Result<()> {
+        let frame = SystemFrame::new(FrameBody::Reply {
+            exchange: self.exchange,
+            reply: Reply::committed(NonEmpty::single(SubReply::Ok(self.reply))),
+        });
+        LengthPrefixedCodec::default()
+            .write_body_async(stream, &LengthPrefixedFrameBody::new(frame.encode()?))
+            .await?;
+        stream.flush().await.map_err(FrameError::from)?;
         Ok(())
     }
-
-    fn state(&self) -> SystemState {
-        SystemState {
-            backend: self.backend,
-            served_request_count: self.served_request_count,
-            last_operation: self.last_operation,
-        }
-    }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ReadSystemState {
-    pub minimum_served_request_count: u64,
-}
-
-impl ReadSystemState {
-    pub fn expecting_at_least(minimum_served_request_count: u64) -> Self {
-        Self {
-            minimum_served_request_count,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct RecordServedSystemRequest {
-    pub operation: SystemOperationKind,
-}
-
-impl Actor for SystemSupervisor {
-    type Args = SystemBackend;
-    type Error = Infallible;
-
-    async fn on_start(
-        backend: Self::Args,
-        _actor_reference: ActorRef<Self>,
-    ) -> std::result::Result<Self, Self::Error> {
-        Ok(Self::new(backend))
-    }
-}
-
-impl Message<ReadSystemState> for SystemSupervisor {
-    type Reply = SystemState;
-
-    async fn handle(
-        &mut self,
-        message: ReadSystemState,
-        _context: &mut Context<Self, Self::Reply>,
-    ) -> Self::Reply {
-        let _satisfied = self.served_request_count >= message.minimum_served_request_count;
-        self.state()
-    }
-}
-
-impl Message<RecordServedSystemRequest> for SystemSupervisor {
-    type Reply = SystemState;
-
-    async fn handle(
-        &mut self,
-        message: RecordServedSystemRequest,
-        _context: &mut Context<Self, Self::Reply>,
-    ) -> Self::Reply {
-        self.last_operation = Some(message.operation);
-        self.served_request_count = self.served_request_count.saturating_add(1);
-        self.state()
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct SystemRequestHandler {
-    system: ActorRef<SystemSupervisor>,
-}
-
-impl SystemRequestHandler {
-    pub fn new(system: ActorRef<SystemSupervisor>) -> Self {
-        Self { system }
-    }
-
-    pub async fn reply_for_request(&self, request: SystemRequest) -> Result<SystemReply> {
-        let operation = request.operation_kind();
-        let _state = self
-            .system
-            .ask(RecordServedSystemRequest { operation })
-            .await
-            .map_err(|error| Error::ActorCall {
-                detail: error.to_string(),
-            })?;
-        match request {
-            SystemRequest::QueryStatus(query) => self.status_reply(query).await,
-            other => Ok(SystemReply::SystemRequestUnimplemented(
-                SystemRequestUnimplemented {
-                    operation: other.operation_kind(),
-                    reason: SystemUnimplementedReason::NotBuiltYet,
-                },
-            )),
-        }
-    }
-
-    async fn status_reply(&self, query: SystemStatusQuery) -> Result<SystemReply> {
-        let state = self
-            .system
-            .ask(ReadSystemState::expecting_at_least(0))
-            .await
-            .map_err(|error| Error::ActorCall {
-                detail: error.to_string(),
-            })?;
-        Ok(SystemReply::SystemStatus(SystemStatus {
-            backend: query.backend,
-            health: Self::health(&state),
-            readiness: Self::readiness(&state),
-        }))
-    }
-
-    fn health(state: &SystemState) -> SystemHealth {
-        match state.backend {
-            SystemBackend::Niri => SystemHealth::Running,
-        }
-    }
-
-    fn readiness(state: &SystemState) -> SystemReadiness {
-        match state.backend {
-            SystemBackend::Niri => SystemReadiness::Ready,
-        }
-    }
-}
-
+/// One supervision reply, framed and written back to the manager.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SystemCommandLine {
-    arguments: Vec<OsString>,
+pub struct WorkingSupervisionReply {
+    exchange: ExchangeIdentifier,
+    reply: signal_persona::Reply,
 }
 
-impl SystemCommandLine {
-    pub fn from_environment() -> Self {
-        Self::from_arguments(std::env::args_os().skip(1))
+impl WorkingSupervisionReply {
+    pub fn new(exchange: ExchangeIdentifier, reply: signal_persona::Reply) -> Self {
+        Self { exchange, reply }
     }
 
-    pub fn from_arguments<I, S>(arguments: I) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: Into<OsString>,
-    {
-        Self {
-            arguments: arguments.into_iter().map(Into::into).collect(),
-        }
-    }
-
-    pub fn daemon(&self) -> Result<SystemDaemon> {
-        let socket = self.arguments.first().ok_or(Error::MissingSocket)?;
-        if let Some(extra) = self.arguments.get(1) {
-            return Err(Error::UnexpectedArgument {
-                got: extra.to_string_lossy().to_string(),
-            });
-        }
-        Ok(SystemDaemon::from_socket(PathBuf::from(socket)))
-    }
-
-    pub fn run(&self) -> Result<()> {
-        self.daemon()?.run()
+    async fn write(self, stream: &mut tokio::net::UnixStream) -> Result<()> {
+        let frame = signal_persona::Frame::new(signal_persona::FrameBody::Reply {
+            exchange: self.exchange,
+            reply: Reply::committed(NonEmpty::single(SubReply::Ok(self.reply))),
+        });
+        LengthPrefixedCodec::default()
+            .write_body_async(stream, &LengthPrefixedFrameBody::new(frame.encode()?))
+            .await?;
+        stream.flush().await.map_err(FrameError::from)?;
+        Ok(())
     }
 }
