@@ -6,6 +6,8 @@ events, target identity, or backend adapters.
 Rules for work here:
 
 - Model observations as typed pushed events.
+- Keep `system` and `meta-system` as thin clients over `signal-system` and
+  `meta-signal-system`; local direct Niri inspection belongs to `system-focus`.
 - `system-daemon` starts from exactly one signal-encoded/rkyv
   `SystemDaemonConfiguration` file. Inline NOTA and `.nota` startup files
   belong to deploy/CLI tooling and are rejected before daemon construction.

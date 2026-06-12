@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use signal_system::{SystemBackend, SystemDaemonConfiguration};
-use triad_runtime::{DaemonConfiguration, SocketMode as RuntimeSocketMode};
+use triad_runtime::{BindingSurface, SocketMode as RuntimeSocketMode};
 
 use crate::error::{Error, Result};
 
@@ -9,7 +9,7 @@ use crate::error::{Error, Result};
 /// `signal-system` startup contract that the Persona manager encodes when it
 /// spawns `system-daemon`. The contract `SystemDaemonConfiguration` is the
 /// externally-consumed boundary; this type adds the cached `PathBuf`s the
-/// emitted daemon shell binds from through `triad_runtime::DaemonConfiguration`.
+/// emitted daemon shell binds from through `triad_runtime::BindingSurface`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Configuration {
     raw: SystemDaemonConfiguration,
@@ -64,7 +64,7 @@ impl Configuration {
     }
 }
 
-impl DaemonConfiguration for Configuration {
+impl BindingSurface for Configuration {
     fn socket_path(&self) -> &Path {
         &self.system_socket_path
     }

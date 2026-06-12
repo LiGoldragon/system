@@ -18,11 +18,20 @@ name = "system"
 path = "src/main.rs"
 
 [[bin]]
+name = "meta-system"
+path = "src/bin/meta_system.rs"
+
+[[bin]]
 name = "system-daemon"
 path = "src/daemon_main.rs"
 
+[[bin]]
+name = "system-focus"
+path = "src/bin/system_focus.rs"
+
 [dependencies]
 kameo                 = { version = "0.20", default-features = false, features = ["macros", "tracing"] }
+meta-signal-system    = { git = "https://github.com/LiGoldragon/meta-signal-system.git", branch = "main" }
 nota-next             = { git = "https://github.com/LiGoldragon/nota-next.git", branch = "main" }
 rkyv                  = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
 serde                 = { version = "1", features = ["derive"] }

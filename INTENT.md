@@ -20,6 +20,10 @@ starts from exactly one signal-encoded/rkyv
 `SystemDaemonConfiguration` file and rejects inline NOTA and `.nota`
 startup files.
 
+Every component exposes its working signal and meta policy contracts as two
+thin CLI clients. For `system`, `system` is the ordinary `signal-system` client
+and `meta-system` is the `meta-signal-system` policy client.
+
 Key constraints: producers push events; consumers subscribe — unknown system state is
 explicit typed state, never a reason to poll. Read-only observations and privileged actions
 are separate surfaces; force-focus and focus-drift suppression require manager-created

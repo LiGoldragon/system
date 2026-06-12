@@ -35,7 +35,15 @@
             "rust-src"
           ];
           craneLib = (crane.mkLib pkgs).overrideToolchain toolchain;
-          src = craneLib.cleanCargoSource ./.;
+          schemaFilter =
+            path: type:
+            (type == "regular" || type == "directory") && (builtins.match ".*/schema(/.*)?" path != null);
+          sourceFilter = path: type: (craneLib.filterCargoSources path type) || (schemaFilter path type);
+          src = pkgs.lib.cleanSourceWith {
+            src = ./.;
+            filter = sourceFilter;
+            name = "source";
+          };
           commonArgs = {
             inherit src;
             strictDeps = true;
@@ -92,30 +100,34 @@
               inherit (context) cargoArtifacts;
             }
           );
-          system-daemon-applies-spawn-envelope-socket-mode =
-            context.cargoTest "daemon" "system_daemon_applies_spawn_envelope_socket_mode";
-          system-daemon-answers-status-readiness =
-            context.cargoTest "daemon" "system_daemon_answers_status_readiness";
-          system-daemon-answers-component-supervision-relation =
-            context.cargoTest "daemon" "system_daemon_answers_component_supervision_relation";
-          system-daemon-returns-typed-unimplemented =
-            context.cargoTest "daemon" "system_daemon_returns_typed_unimplemented";
+          system-daemon-applies-spawn-envelope-socket-mode = context.cargoTest "daemon" "daemon_binds_sockets_at_the_managed_mode";
+          system-daemon-answers-status-readiness = context.cargoTest "daemon" "daemon_answers_status_readiness";
+          system-daemon-answers-component-supervision-relation = context.cargoTest "daemon" "daemon_answers_component_supervision_relation";
+          system-daemon-answers-meta-system-relation = context.cargoTest "daemon" "daemon_answers_meta_system_relation_with_typed_paused_reply";
+          system-daemon-returns-typed-unimplemented = context.cargoTest "daemon" "daemon_returns_typed_unimplemented";
+          system-cli-reaches-working-socket = context.cargoTest "component_cli" "system_cli_reaches_working_socket_and_prints_typed_reply";
+          meta-system-cli-reaches-policy-socket = context.cargoTest "component_cli" "meta_system_cli_reaches_policy_socket_and_prints_typed_reply";
         }
       );
 
-      apps = forSystems (
-        system:
-        {
-          default = {
-            type = "app";
-            program = "${self.packages.${system}.default}/bin/system";
-          };
-          daemon = {
-            type = "app";
-            program = "${self.packages.${system}.default}/bin/system-daemon";
-          };
-        }
-      );
+      apps = forSystems (system: {
+        default = {
+          type = "app";
+          program = "${self.packages.${system}.default}/bin/system";
+        };
+        daemon = {
+          type = "app";
+          program = "${self.packages.${system}.default}/bin/system-daemon";
+        };
+        focus = {
+          type = "app";
+          program = "${self.packages.${system}.default}/bin/system-focus";
+        };
+        meta = {
+          type = "app";
+          program = "${self.packages.${system}.default}/bin/meta-system";
+        };
+      });
 
       devShells = forSystems (
         system:

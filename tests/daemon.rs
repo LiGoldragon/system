@@ -15,6 +15,10 @@ use std::process::{Child, Command};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use meta_signal_system::{
+    MetaSystemFrame, MetaSystemFrameBody, MetaSystemReply, MetaSystemRequest, RequestUnimplemented,
+    UnimplementedReason,
+};
 use signal_frame::{
     ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Reply, Request, SessionEpoch,
     SubReply,
@@ -31,7 +35,7 @@ use signal_system::{
     SystemStatus, SystemStatusQuery, SystemTarget, SystemUnimplementedReason,
 };
 use system::{Configuration, FocusSubscription};
-use triad_runtime::DaemonConfiguration;
+use triad_runtime::BindingSurface;
 
 const MAXIMUM_FRAME_BYTES: u64 = 1024 * 1024;
 
@@ -95,6 +99,13 @@ impl DaemonFixture {
             UnixStream::connect(&self.supervision_socket).expect("supervision client connects");
         write_supervision_request(&mut stream, request);
         read_supervision_reply(&mut stream)
+    }
+
+    fn meta_system_exchange(&self, request: MetaSystemRequest) -> MetaSystemReply {
+        let mut stream =
+            UnixStream::connect(&self.supervision_socket).expect("meta-system client connects");
+        write_meta_system_request(&mut stream, request);
+        read_meta_system_reply(&mut stream)
     }
 }
 
@@ -219,6 +230,24 @@ fn daemon_answers_component_supervision_relation() {
 }
 
 #[test]
+fn daemon_answers_meta_system_relation_with_typed_paused_reply() {
+    let fixture = DaemonFixture::new("meta-system");
+    let mut child = fixture.spawn();
+
+    let reply = fixture.meta_system_exchange(MetaSystemRequest::Configure(fixture.configuration()));
+
+    assert_eq!(
+        reply,
+        MetaSystemReply::RequestUnimplemented(RequestUnimplemented {
+            operation: meta_signal_system::OperationKind::Configure,
+            reason: UnimplementedReason::ComponentPaused,
+        })
+    );
+
+    stop_child(&mut child);
+}
+
+#[test]
 fn supervision_single_payload_request_round_trips() {
     let request = Request::from_payloads(NonEmpty::single(SupervisionRequest::Query(
         SupervisionQuery::HealthStatus(ComponentName::new("system")),
@@ -263,6 +292,31 @@ fn write_supervision_request(stream: &mut UnixStream, request: SupervisionReques
         request: Request::from_payload(request),
     });
     write_envelope(stream, frame.encode().expect("supervision request encodes"));
+}
+
+fn write_meta_system_request(stream: &mut UnixStream, request: MetaSystemRequest) {
+    let frame = MetaSystemFrame::new(MetaSystemFrameBody::Request {
+        exchange: test_exchange(),
+        request: Request::from_payload(request),
+    });
+    write_envelope(stream, frame.encode().expect("meta-system request encodes"));
+}
+
+fn read_meta_system_reply(stream: &mut UnixStream) -> MetaSystemReply {
+    let body = read_envelope(stream);
+    match MetaSystemFrame::decode(&body)
+        .expect("meta-system reply frame decodes")
+        .into_body()
+    {
+        MetaSystemFrameBody::Reply { reply, .. } => match reply {
+            Reply::Accepted { per_operation, .. } => match per_operation.into_head() {
+                SubReply::Ok(payload) => payload,
+                other => panic!("expected ok meta-system sub-reply, got {other:?}"),
+            },
+            Reply::Rejected { reason } => panic!("expected accepted reply, got {reason:?}"),
+        },
+        other => panic!("expected meta-system reply, got {other:?}"),
+    }
 }
 
 fn read_supervision_reply(stream: &mut UnixStream) -> SupervisionReply {

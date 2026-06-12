@@ -1,8 +1,11 @@
+pub mod cli_argument;
+pub mod client;
 pub mod command;
 pub mod configuration;
 pub mod daemon;
 pub mod error;
 pub mod event;
+pub mod meta;
 pub mod niri;
 pub mod niri_focus;
 pub mod schema;
@@ -10,6 +13,8 @@ pub mod supervision;
 pub mod supervisor;
 pub mod target;
 
+pub use cli_argument::NotaCommandText;
+pub use client::{SystemClient, SystemCommandEnvironment, SystemCommandLine, SystemEndpoint};
 pub use command::CommandLine;
 pub use configuration::Configuration;
 pub use daemon::{
@@ -17,6 +22,9 @@ pub use daemon::{
 };
 pub use error::{Error, Result};
 pub use event::FocusState;
+pub use meta::{
+    MetaSystemClient, MetaSystemCommandEnvironment, MetaSystemCommandLine, MetaSystemEndpoint,
+};
 pub use niri::{FocusTracker, NiriEvent, NiriFocusSource, NiriWindowSnapshot, NiriWindows};
 pub use niri_focus::{ApplyNiriEvent, FocusStatistics, FocusStatisticsProbe, ReadFocusStatistics};
 pub use schema::daemon::{ComponentDaemon, DaemonEntry};

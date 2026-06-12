@@ -1,8 +1,7 @@
-use system::{CommandLine, NiriFocusSource};
+use system::SystemCommandLine;
 
 fn main() {
-    let source = NiriFocusSource::from_environment();
-    if let Err(error) = CommandLine::from_environment().run(&source, std::io::stdout()) {
+    if let Err(error) = SystemCommandLine::from_env().run(std::io::stdout().lock()) {
         eprintln!("system: {error}");
         std::process::exit(1);
     }

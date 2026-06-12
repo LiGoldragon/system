@@ -30,7 +30,10 @@ flowchart LR
 
 - typed target identity for windows, panes, and harness surfaces;
 - focus-state observations;
-- a `system` CLI for one-shot focus probes and focus subscriptions;
+- a `system` thin CLI for the ordinary `signal-system` socket;
+- a `meta-system` thin CLI for the `meta-signal-system` policy socket;
+- a `system-focus` helper for local one-shot focus probes and focus
+  subscriptions while the component remains paused;
 - a `system-daemon` socket skeleton for the first Persona stack;
 - a Niri focus source backed by `niri msg --json windows` and
   `niri msg --json event-stream`;
@@ -57,8 +60,10 @@ gating, peer credentials, lifecycle, and the `ExitReport` entry in
 surface in `src/daemon.rs`. system adopts the **`component_decoded` working
 tier**: the ordinary `system.sock` keeps speaking the `signal-system` contract
 `SystemFrame` (the component owns the per-connection decode) wrapped in the
-emitted length-prefixed envelope, and the owner-only **meta** listener carries
-the engine-management supervision protocol. The existing Kameo actors stay the
+emitted length-prefixed envelope. The owner-only **meta** listener recognizes
+`meta-signal-system` first and returns a typed paused/unimplemented reply for
+`Configure`; during the manager migration it also falls back to the
+engine-management supervision protocol. The existing Kameo actors stay the
 engine, shared as `&Self::Engine` and lazily started inside the daemon's tokio
 runtime; their mailboxes serialise every exchange with no component-internal
 lock.
@@ -69,17 +74,20 @@ The component skeleton is honest:
    `SystemDaemonConfiguration` file at startup, rejects inline NOTA and
    `.nota` startup files, and binds `system.sock` at the managed socket mode
    carried by that record — all through the emitted `DaemonCommand` /
-   `DaemonBinder` and system's `Configuration: triad_runtime::DaemonConfiguration`.
-2. The daemon answers engine-management supervision requests
+   `DaemonBinder` and system's `Configuration: triad_runtime::BindingSurface`.
+2. The daemon answers `meta-signal-system::Configure` with a typed
+   `RequestUnimplemented { reason: ComponentPaused }` until the paused
+   component owns a real hot-configuration reducer.
+3. The daemon answers engine-management supervision requests
    (`signal-persona::Operation`, the consolidated supervision contract) from a
    `SupervisionPhase` actor over the owner-only meta socket — `ComponentReady {
    component_started_at }` once the socket is bound;
    `ComponentHealthReport { health: Running }`.
-3. The daemon returns `SystemReply::SystemRequestUnimplemented` for every
+4. The daemon returns `SystemReply::SystemRequestUnimplemented` for every
    unbuilt domain request (`WatchFocus`, `UnwatchFocus`, `QueryFocus`). The
    contract decodes each variant; the reply is typed and closed, never a hang
    or untyped text error.
-4. `FocusTracker` is a real Kameo actor with `target`, `id`, `last`,
+5. `FocusTracker` is a real Kameo actor with `target`, `id`, `last`,
    `generations`, `workspace_id`, `synthetic_generation`,
    `applied_event_count`, and `emitted_observation_count` state. Niri
    event application goes through its message handler, not direct method
@@ -194,8 +202,11 @@ or `SystemRequest`.
 
 ```text
 src/command.rs       NOTA CLI command surface over `SystemRequest`
+src/client.rs        ordinary `system` thin client for the `signal-system` socket
+src/meta.rs          `meta-system` thin client for the `meta-signal-system` socket
+src/cli_argument.rs  shared one-argument NOTA text/file decoding for thin clients
 src/configuration.rs `Configuration` over `signal-system::SystemDaemonConfiguration`,
-                     `impl triad_runtime::DaemonConfiguration`
+                     `impl triad_runtime::BindingSurface`
 src/daemon.rs        the hand-written `ComponentDaemon` hook surface — engine
                      wiring + the component_decoded working/meta connection hooks
 src/schema/daemon.rs schema-emitted daemon shell (argv, listeners, lifecycle)
@@ -215,7 +226,10 @@ tests/               smoke, daemon, and actor-runtime constraint tests
 |---|---|
 | The daemon applies the managed spawn-envelope socket mode. | `checks.<system>.system-daemon-applies-spawn-envelope-socket-mode` |
 | The daemon answers typed health/readiness. | `checks.<system>.system-daemon-answers-status-readiness` |
+| The daemon accepts the canonical meta-system relation. | `checks.<system>.system-daemon-answers-meta-system-relation` |
 | The daemon returns typed unimplemented for unfinished recognized requests. | `checks.<system>.system-daemon-returns-typed-unimplemented` |
+| The ordinary CLI reaches the working socket. | `checks.<system>.system-cli-reaches-working-socket` |
+| The meta CLI reaches the policy socket. | `checks.<system>.meta-system-cli-reaches-policy-socket` |
 | Niri subscriptions pass events through the Kameo mailbox. | `tests/actor_runtime_truth.rs` |
 | `system` does not own terminal prompt-gate vocabulary. | `tests/smoke.rs` |
 

@@ -13,6 +13,10 @@
 //! decodes a supervision `Frame` and drives `SupervisionPhase`.
 
 use kameo::actor::ActorRef;
+use meta_signal_system::{
+    MetaSystemFrame, MetaSystemFrameBody, MetaSystemReply, MetaSystemRequest, RequestUnimplemented,
+    UnimplementedReason,
+};
 use tokio::io::AsyncWriteExt;
 use tokio::sync::OnceCell;
 use triad_runtime::{
@@ -91,15 +95,30 @@ impl SystemEngine {
             .await
     }
 
-    /// Serve one owner-only supervision (meta) connection: decode an
-    /// engine-management `Frame` request and drive the supervision actor. The
-    /// manager binds this socket to announce, query readiness/health, and stop
-    /// the component.
+    /// Serve one owner-only meta connection. The canonical meta contract is
+    /// `meta-signal-system`; the older engine-management supervision protocol
+    /// still falls through here while the component manager carries both
+    /// surfaces during the daemon-shell migration.
     async fn handle_meta_connection(&self, connection: &mut AcceptedConnection) -> Result<()> {
         let body = LengthPrefixedCodec::default()
             .read_body_async(connection.stream_mut())
             .await?
             .into_bytes();
+        match ReceivedMetaSystemRequest::decode(&body) {
+            Ok(received) => {
+                let reply = MetaSystemReply::RequestUnimplemented(RequestUnimplemented {
+                    operation: received.request.kind(),
+                    reason: UnimplementedReason::ComponentPaused,
+                });
+                return WorkingMetaSystemReply::new(received.exchange, reply)
+                    .write(connection.stream_mut())
+                    .await;
+            }
+            Err(MetaSystemDecode::NotMeta) => {}
+            Err(MetaSystemDecode::UnexpectedFrame(got)) => {
+                return Err(Error::UnexpectedSignalFrame { got });
+            }
+        }
         let received = ReceivedSupervisionRequest::decode(&body)?;
         let reply = self
             .supervision()
@@ -200,6 +219,71 @@ impl WorkingSystemReply {
 
     async fn write(self, stream: &mut tokio::net::UnixStream) -> Result<()> {
         let frame = SystemFrame::new(FrameBody::Reply {
+            exchange: self.exchange,
+            reply: Reply::committed(NonEmpty::single(SubReply::Ok(self.reply))),
+        });
+        LengthPrefixedCodec::default()
+            .write_body_async(stream, &LengthPrefixedFrameBody::new(frame.encode()?))
+            .await?;
+        stream.flush().await.map_err(FrameError::from)?;
+        Ok(())
+    }
+}
+
+/// One decoded meta-system request plus its exchange identifier.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReceivedMetaSystemRequest {
+    exchange: ExchangeIdentifier,
+    request: MetaSystemRequest,
+}
+
+impl ReceivedMetaSystemRequest {
+    pub fn decode(body: &[u8]) -> std::result::Result<Self, MetaSystemDecode> {
+        let frame = MetaSystemFrame::decode(body).map_err(|_| MetaSystemDecode::NotMeta)?;
+        match frame.into_body() {
+            MetaSystemFrameBody::Request { exchange, request } => {
+                let (request, tail) = request.payloads.into_head_and_tail();
+                if !tail.is_empty() {
+                    return Err(MetaSystemDecode::UnexpectedFrame(format!(
+                        "expected one meta-system payload, got {}",
+                        tail.len() + 1
+                    )));
+                }
+                Ok(Self { exchange, request })
+            }
+            other => Err(MetaSystemDecode::UnexpectedFrame(format!("{other:?}"))),
+        }
+    }
+
+    pub fn exchange(&self) -> ExchangeIdentifier {
+        self.exchange
+    }
+
+    pub fn request(&self) -> &MetaSystemRequest {
+        &self.request
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MetaSystemDecode {
+    NotMeta,
+    UnexpectedFrame(String),
+}
+
+/// One meta-system reply, framed and written back to the owner client.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkingMetaSystemReply {
+    exchange: ExchangeIdentifier,
+    reply: MetaSystemReply,
+}
+
+impl WorkingMetaSystemReply {
+    pub fn new(exchange: ExchangeIdentifier, reply: MetaSystemReply) -> Self {
+        Self { exchange, reply }
+    }
+
+    async fn write(self, stream: &mut tokio::net::UnixStream) -> Result<()> {
+        let frame = MetaSystemFrame::new(MetaSystemFrameBody::Reply {
             exchange: self.exchange,
             reply: Reply::committed(NonEmpty::single(SubReply::Ok(self.reply))),
         });
