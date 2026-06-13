@@ -370,7 +370,7 @@ checksum = "f8ca58f447f06ed17d5fc4043ce1b10dd205e060fb3ce5b979b8ed8e59ff3f79"
 [[package]]
 name = "meta-signal-system"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/meta-signal-system.git?branch=main#15486309269a878eb1d40029ca060e96f06d848b"
+source = "git+https://github.com/LiGoldragon/meta-signal-system.git?branch=main#06e8e9ff7772070717a44581f82bed316c3a1f79"
 dependencies = [
  "nota-next",
  "rkyv",
@@ -581,7 +581,7 @@ dependencies = [
 [[package]]
 name = "schema-rust-next"
 version = "0.5.3"
-source = "git+https://github.com/LiGoldragon/schema-rust-next.git?branch=main#7c15bc3fa3d07f4710acca16f14eef1aa68b02dd"
+source = "git+https://github.com/LiGoldragon/schema-rust-next.git?branch=main#00763d676d63395d45b5f8a81dbf9a2287574ca9"
 dependencies = [
  "prettyplease",
  "proc-macro2",
@@ -681,7 +681,7 @@ dependencies = [
 [[package]]
 name = "signal-system"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/signal-system.git?branch=main#8f24349731440efbd79a7ce1c96dcb589de57fe3"
+source = "git+https://github.com/LiGoldragon/signal-system.git?branch=main#01ed03987458c396a50d4b751e0c82889a1cd97e"
 dependencies = [
  "nota-next",
  "rkyv",
