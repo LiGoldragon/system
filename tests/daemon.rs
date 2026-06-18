@@ -23,16 +23,17 @@ use signal_frame::{
     ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Reply, Request, SessionEpoch,
     SubReply,
 };
-use signal_persona::origin::{OwnerIdentity, UnixUserIdentifier};
 use signal_persona::{
     ComponentHealth, ComponentKind, ComponentName, EngineManagementProtocolVersion,
     Frame as SupervisionFrame, FrameBody as SupervisionFrameBody, Operation as SupervisionRequest,
-    Presence, Query as SupervisionQuery, Reply as SupervisionReply, SocketMode, WirePath,
+    OwnerIdentity, Presence, Query as SupervisionQuery, Reply as SupervisionReply,
+    UnixUserIdentifier,
 };
 use signal_system::{
-    SystemBackend, SystemDaemonConfiguration, SystemFrame, SystemFrameBody, SystemHealth,
-    SystemOperationKind, SystemReadiness, SystemReply, SystemRequest, SystemRequestUnimplemented,
-    SystemStatus, SystemStatusQuery, SystemTarget, SystemUnimplementedReason,
+    SocketMode, SystemBackend, SystemDaemonConfiguration, SystemFrame, SystemFrameBody,
+    SystemHealth, SystemOperationKind, SystemReadiness, SystemReply, SystemRequest,
+    SystemRequestUnimplemented, SystemStatus, SystemStatusQuery, SystemTarget,
+    SystemUnimplementedReason, WirePath,
 };
 use system::{Configuration, FocusSubscription};
 use triad_runtime::BindingSurface;
@@ -204,17 +205,19 @@ fn daemon_answers_component_supervision_relation() {
     // tier, so each supervision exchange opens its own connection.
     assert!(matches!(
         fixture.supervision_exchange(SupervisionRequest::Announce(Presence {
-            expected_component: ComponentName::new("system"),
-            expected_kind: ComponentKind::System,
+            expected_component: ComponentName::new("system").into(),
+            expected_kind: ComponentKind::System.into(),
             engine_management_protocol_version: EngineManagementProtocolVersion::new(1),
-        })),
+        }
+        .into())),
         SupervisionReply::Identified(identity)
-            if identity.name.as_str() == "system" && identity.kind == ComponentKind::System
+            if identity.payload().component_name.as_ref() == "system"
+                && identity.payload().component_kind == ComponentKind::System
     ));
 
     assert!(matches!(
         fixture.supervision_exchange(SupervisionRequest::Query(
-            SupervisionQuery::ReadinessStatus(ComponentName::new("system"))
+            SupervisionQuery::ReadinessStatus(ComponentName::new("system")).into()
         )),
         SupervisionReply::Ready(_)
     ));
@@ -222,8 +225,10 @@ fn daemon_answers_component_supervision_relation() {
     assert!(matches!(
         fixture.supervision_exchange(SupervisionRequest::Query(SupervisionQuery::HealthStatus(
             ComponentName::new("system")
-        ))),
-        SupervisionReply::HealthReport(report) if report.health == ComponentHealth::Running
+        )
+        .into())),
+        SupervisionReply::HealthReport(report)
+            if report.payload().payload() == &ComponentHealth::Running
     ));
 
     stop_child(&mut child);
@@ -250,7 +255,7 @@ fn daemon_answers_meta_system_relation_with_typed_paused_reply() {
 #[test]
 fn supervision_single_payload_request_round_trips() {
     let request = Request::from_payloads(NonEmpty::single(SupervisionRequest::Query(
-        SupervisionQuery::HealthStatus(ComponentName::new("system")),
+        SupervisionQuery::HealthStatus(ComponentName::new("system")).into(),
     )));
     let frame = SupervisionFrame::new(SupervisionFrameBody::Request {
         exchange: test_exchange(),

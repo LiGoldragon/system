@@ -56,11 +56,11 @@ impl Configuration {
     }
 
     fn system_socket_mode(&self) -> RuntimeSocketMode {
-        RuntimeSocketMode::new(self.raw.system_socket_mode.into_u32())
+        RuntimeSocketMode::new(*self.raw.system_socket_mode.payload() as u32)
     }
 
     fn supervision_socket_mode(&self) -> RuntimeSocketMode {
-        RuntimeSocketMode::new(self.raw.supervision_socket_mode.into_u32())
+        RuntimeSocketMode::new(*self.raw.supervision_socket_mode.payload() as u32)
     }
 }
 

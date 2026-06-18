@@ -10,11 +10,11 @@ use meta_signal_system::{
 };
 use nota_next::NotaEncode;
 use signal_frame::{NonEmpty, Reply, SubReply};
-use signal_persona::origin::{OwnerIdentity, UnixUserIdentifier};
-use signal_persona::{SocketMode, WirePath};
+use signal_persona::{OwnerIdentity, UnixUserIdentifier};
 use signal_system::{
-    SystemBackend, SystemDaemonConfiguration, SystemFrame, SystemFrameBody, SystemHealth,
-    SystemReadiness, SystemReply, SystemRequest, SystemStatus, SystemStatusQuery,
+    SocketMode, SystemBackend, SystemDaemonConfiguration, SystemFrame, SystemFrameBody,
+    SystemHealth, SystemReadiness, SystemReply, SystemRequest, SystemStatus, SystemStatusQuery,
+    WirePath,
 };
 use triad_runtime::{FrameBody as RuntimeFrameBody, LengthPrefixedCodec};
 
