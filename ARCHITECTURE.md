@@ -6,6 +6,12 @@
 forcing router or harness code to know about Niri, Wayland, macOS, or any other
 backend.
 
+Today's `system` is a realization step on the eventually-self-hosting stack: it
+is the OS-boundary layer that lets the rest of Persona stay backend-agnostic
+while the operating system still lives outside Sema. Once the OS itself lives in
+Sema, this OS-boundary layer goes away. The component is built as a temporary
+boundary, not a permanent home for OS knowledge.
+
 > **Scope.** System has no durable store today. If it later owns durable
 > subscription registrations, backend cursors, or adapter state, that state
 > lives in `system.sema` opened through `sema-engine`; the daemon does not
