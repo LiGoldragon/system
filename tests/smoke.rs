@@ -1,4 +1,4 @@
-use nota_next::NotaSource;
+use nota::NotaSource;
 use system::{
     FocusObservation, FocusSubscription, FocusTracker, HarnessTarget, NiriEvent, NiriWindowId,
     NiriWindows, SystemRequest, SystemTarget,

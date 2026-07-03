@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::io::{BufRead, Write};
 use std::process::{Command, Stdio};
 
-use nota_next::NotaEncode;
+use nota::NotaEncode;
 use serde::Deserialize;
 
 use crate::error::{Error, Result};

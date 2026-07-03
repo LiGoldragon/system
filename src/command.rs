@@ -2,7 +2,7 @@ use std::ffi::OsString;
 use std::io::Write;
 use std::path::PathBuf;
 
-use nota_next::{NotaEncode, NotaSource};
+use nota::{NotaEncode, NotaSource};
 use signal_system::{
     SystemHealth, SystemReadiness, SystemReply, SystemRequest, SystemRequestUnimplemented,
     SystemStatus, SystemUnimplementedReason,

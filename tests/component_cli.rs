@@ -8,7 +8,7 @@ use meta_signal_system::{
     MetaSystemFrame, MetaSystemFrameBody, MetaSystemReply, MetaSystemRequest, RequestUnimplemented,
     UnimplementedReason,
 };
-use nota_next::NotaEncode;
+use nota::NotaEncode;
 use signal_frame::{NonEmpty, Reply, SubReply};
 use signal_persona::{OwnerIdentity, UnixUserIdentifier};
 use signal_system::{
