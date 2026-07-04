@@ -2,7 +2,7 @@
 //!
 //! The uniform daemon skeleton (argv parsing, async task-backed multi-listener
 //! binding, request gating, peer credentials, lifecycle, and the `ExitReport`
-//! entry) is emitted into `src/schema/daemon.rs` by schema-rust-next's daemon
+//! entry) is emitted into `src/schema/daemon.rs` by schema-rust's daemon
 //! emitter. System adopts the `component_decoded` working tier: the ordinary
 //! `system.sock` keeps speaking the `signal-system` contract wire (the
 //! component owns the per-connection `SystemFrame` decode), and the existing

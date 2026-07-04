@@ -58,7 +58,7 @@ the prototype's "all six daemons ready" witness passes, and the FocusTracker
 exists today as a real Kameo actor (state-bearing, message-driven, not a
 marker) ready for the Niri event-stream path that activates on unpause.
 
-The daemon runs on the **schema-emitted daemon shell** (`schema-rust-next`
+The daemon runs on the **schema-emitted daemon shell** (`schema-rust`
 `NexusDaemonShape` + `GenerationDriver`, mirrored on `orchestrate`). The
 emitter owns argv parsing, async task-backed multi-listener binding, request
 gating, peer credentials, lifecycle, and the `ExitReport` entry in
