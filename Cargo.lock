@@ -594,7 +594,7 @@ dependencies = [
 [[package]]
 name = "schema-rust"
 version = "0.5.3"
-source = "git+https://github.com/LiGoldragon/schema-rust.git?branch=drop-next#af814e757cd84fb0b3b8cce9c0623f69b6d99b5c"
+source = "git+https://github.com/LiGoldragon/schema-rust.git?branch=drop-next#67b91f5a6a70eced5854f27c7af8b39ace7e2d88"
 dependencies = [
  "prettyplease",
  "proc-macro2",
@@ -684,7 +684,7 @@ dependencies = [
 [[package]]
 name = "signal-persona"
 version = "0.2.0"
-source = "git+https://github.com/LiGoldragon/signal-persona.git?branch=drop-next#97f630a0bad0ca368d9ced267d47e26b1729be15"
+source = "git+https://github.com/LiGoldragon/signal-persona.git?branch=drop-next#1a4b232a99563f27245c38952457bedca4dfa66a"
 dependencies = [
  "nota",
  "rkyv",
@@ -695,7 +695,7 @@ dependencies = [
 [[package]]
 name = "signal-system"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/signal-system.git?branch=drop-next#ceafdbff3f50d339571dd248e0527a2555681116"
+source = "git+https://github.com/LiGoldragon/signal-system.git?branch=drop-next#fed5e72aaf6d3cc6fa6eaa6acff2b7ee5fcf02eb"
 dependencies = [
  "nota",
  "rkyv",
