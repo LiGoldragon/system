@@ -211,7 +211,7 @@ fn daemon_answers_component_supervision_relation() {
         }
         .into())),
         SupervisionReply::Identified(identity)
-            if identity.payload().component_name.as_ref() == "system"
+            if identity.payload().component_name.payload() == "system"
                 && identity.payload().component_kind == ComponentKind::System
     ));
 
