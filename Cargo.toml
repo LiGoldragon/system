@@ -31,20 +31,20 @@ path = "src/bin/system_focus.rs"
 
 [dependencies]
 kameo                 = { git = "https://github.com/LiGoldragon/kameo.git", branch = "main", default-features = false, features = ["macros", "tracing"] }
-meta-signal-system    = { git = "https://github.com/LiGoldragon/meta-signal-system.git", branch = "drop-next" }
+meta-signal-system    = { git = "https://github.com/LiGoldragon/meta-signal-system.git", branch = "main" }
 nota             = { git = "https://github.com/LiGoldragon/nota.git", branch = "main" }
 rkyv                  = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
 serde                 = { version = "1", features = ["derive"] }
 serde_json            = "1"
-signal-frame          = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "drop-next", features = ["nota-text"] }
-signal-persona        = { git = "https://github.com/LiGoldragon/signal-persona.git", branch = "drop-next" }
-signal-system         = { git = "https://github.com/LiGoldragon/signal-system.git", branch = "drop-next" }
+signal-frame          = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "main", features = ["nota-text"] }
+signal-persona        = { git = "https://github.com/LiGoldragon/signal-persona.git", branch = "main" }
+signal-system         = { git = "https://github.com/LiGoldragon/signal-system.git", branch = "main" }
 thiserror             = "2"
 tokio                 = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util"] }
-triad-runtime         = { git = "https://github.com/LiGoldragon/triad-runtime.git", branch = "drop-next" }
+triad-runtime         = { git = "https://github.com/LiGoldragon/triad-runtime.git", branch = "main" }
 
 [build-dependencies]
-schema-rust = { git = "https://github.com/LiGoldragon/schema-rust.git", branch = "drop-next" }
+schema-rust = { git = "https://github.com/LiGoldragon/schema-rust.git", branch = "main" }
 
 [dev-dependencies]
 tempfile = "3"
