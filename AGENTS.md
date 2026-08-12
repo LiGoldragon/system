@@ -19,3 +19,9 @@ concrete.
 - State storage is `system.sema` through `sema-engine` when this crate owns
   durable state. This crate should usually define system contracts, not own
   router state.
+
+## Protos estate status
+
+Stack: correct-new destination
+Status: active component, current checkout legacy-wired
+This checkout is not proof of correct-new adoption.
